@@ -1866,7 +1866,10 @@ static int binlog_savepoint_set(handlerton *hton, THD *thd, void *sv)
     log.
   */
   if (!(error= mysql_bin_log.write_event(&qinfo)))
+  {
+    thd->clear_binlog_table_maps();
     binlog_trans_log_savepos(thd, (my_off_t*) sv);
+  }
 
   DBUG_RETURN(error);
 }
