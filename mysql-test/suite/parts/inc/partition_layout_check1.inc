@@ -69,7 +69,8 @@ if ($do_file_tests)
    if ($ls)
    {
       # Print the list of files into the protocol
-      replace_result $MYSQLD_DATADIR MYSQLD_DATADIR $MYSQLTEST_VARDIR MYSQLTEST_VARDIR #p# #P# #sp# #SP# part_n part_N;
+      --let $ADDITIONAL_REGEX="/$MYSQLD_DATADIR/MYSQLD_DATADIR/ /$MYSQLTEST_VARDIR/MYSQLTEST_VARDIR/ /part_n/part_N/" 
+      --source include/table_files_replace_pattern.inc
       SELECT file_list AS "unified filelist"
        FROM t0_definition WHERE state = 'old';
    }

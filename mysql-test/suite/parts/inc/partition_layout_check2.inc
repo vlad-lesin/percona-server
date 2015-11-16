@@ -67,7 +67,8 @@ let $run= `SELECT @aux`;
 if ($run)
 {
    --vertical_results
-   --replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR #p# #P# #sp# #SP#
+   --let $ADDITIONAL_REGEX="/$MYSQLTEST_VARDIR/MYSQLTEST_VARDIR/" 
+   --source include/table_files_replace_pattern.inc
    SELECT state,
    REPLACE(create_command,'\n',' ') AS "Table definition",
    REPLACE(file_list     ,'\n',' ') AS "File list"
