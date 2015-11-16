@@ -1,6 +1,7 @@
 [submodule "PerconaFT"]
 	path = storage/tokudb/PerconaFT
-	url = https://github.com/percona/PerconaFT.git
+	url = https://github.com/vlad-lesin/ft-index.git
+  branch = directory_layout_option
 [submodule "Percona-TokuBackup"]
 	path = plugin/tokudb-backup-plugin/Percona-TokuBackup
 	url = https://github.com/percona/Percona-TokuBackup.git
