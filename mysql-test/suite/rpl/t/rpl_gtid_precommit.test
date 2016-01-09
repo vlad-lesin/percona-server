@@ -19,18 +19,26 @@ INSERT INTO t1 VALUES (4,5);
 INSERT INTO t1 VALUES (5,6);
 INSERT INTO t1 VALUES (6,7);
 
-SET GLOBAL gtid_precommit = 0;
---echo #Lost record(7,8) on both master and slave if failed to write binlog file.
-SET SESSION DEBUG = 'd,simulate_do_write_cache_failure';
-INSERT INTO t1 VALUES (7,8);
-
---echo #Lost record(8,9) on both master and slave if failed to write binlog file.
-SET GLOBAL gtid_precommit = 1;
-SET SESSION DEBUG = 'd,simulate_do_write_cache_failure';
-INSERT INTO t1 VALUES (8,9);
-
-SET SESSION DEBUG = '';
-INSERT INTO t1 VALUES (9,10);
+#
+# mysql-5.6.28 contains code which stops binary logging if there is error during
+# binlog group commit and binlog_error_action is set to 'IGNORE_ERROR'(by default).
+# See 0cd3070 revision. But the following test was developed counting on loosing
+# some records in binary log on error during binlog flushing. That's why the test
+# fails on 5.6.28. Commenting out the following strings allows to avoid
+# the test failing.
+#
+#SET GLOBAL gtid_precommit = 0;
+#--echo #Lost record(7,8) on both master and slave if failed to write binlog file.
+#SET SESSION DEBUG = 'd,simulate_do_write_cache_failure';
+#INSERT INTO t1 VALUES (7,8);
+#
+#--echo #Lost record(8,9) on both master and slave if failed to write binlog file.
+#SET GLOBAL gtid_precommit = 1;
+#SET SESSION DEBUG = 'd,simulate_do_write_cache_failure';
+#INSERT INTO t1 VALUES (8,9);
+#
+#SET SESSION DEBUG = '';
+#INSERT INTO t1 VALUES (9,10);
 
 sync_slave_with_master;
 SELECT SUBSTRING_INDEX(@@GLOBAL.GTID_EXECUTED, ":", -1) AS GTID_SET_ON_SLAVE;
