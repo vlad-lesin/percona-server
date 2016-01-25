@@ -6958,14 +6958,15 @@ void MYSQL_BIN_LOG::handle_binlog_flush_or_sync_error(THD *thd,
                                                       bool need_lock_log)
 {
   char errmsg[MYSQL_ERRMSG_SIZE];
-  sprintf(errmsg, "An error occurred during %s stage of the commit. "
+  snprintf(errmsg, sizeof(errmsg), "An error occurred during %s stage of the commit. "
           "'binlog_error_action' is set to '%s'.",
           thd->commit_error== THD::CE_FLUSH_ERROR ? "flush" : "sync",
           binlog_error_action == ABORT_SERVER ? "ABORT_SERVER" : "IGNORE_ERROR");
   if (binlog_error_action == ABORT_SERVER)
   {
-    sprintf(errmsg, "%s Hence aborting the server.", errmsg);
-    exec_binlog_error_action_abort(errmsg);
+    char errmsg_for_abort[MYSQL_ERRMSG_SIZE];
+    snprintf(errmsg_for_abort, sizeof(errmsg_for_abort), "%s Hence aborting the server.", errmsg);
+    exec_binlog_error_action_abort(errmsg_for_abort);
   }
   else
   {
