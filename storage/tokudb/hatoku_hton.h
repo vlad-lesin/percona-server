@@ -180,9 +180,7 @@ inline bool tokudb_killed_thd_callback(void *extra, uint64_t deleted_rows) {
     return thd_killed(thd) != 0;
 }
 
-
 extern HASH tokudb_open_tables;
-extern tokudb::thread::mutex_t tokudb_mutex;
 extern const char* tokudb_hton_name;
 extern int tokudb_hton_initialized;
 extern tokudb::thread::rwlock_t tokudb_hton_initialized_lock;
