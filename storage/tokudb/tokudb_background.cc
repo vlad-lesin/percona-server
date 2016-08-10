@@ -66,12 +66,12 @@ void job_manager_t::destroy() {
     _sem.set_interrupt();
 
     while (_background_jobs.size()) {
-        _mutex.lock();
+        mutex_t_lock(_mutex);
         job_t* job = _background_jobs.front();
         cancel(job);
         _background_jobs.pop_front();
         delete job;
-        _mutex.unlock();
+        mutex_t_unlock(_mutex);
     }
 
     void* result;
@@ -82,7 +82,7 @@ bool job_manager_t::run_job(job_t* newjob, bool background) {
     bool ret = false;
     const char* jobkey = newjob->key();
 
-    _mutex.lock();
+    mutex_t_lock(_mutex);
     assert_always(!_shutdown);
 
     for (jobs_t::iterator it = _background_jobs.begin();
@@ -137,15 +137,16 @@ bool job_manager_t::run_job(job_t* newjob, bool background) {
     }
 
 cleanup:
-    _mutex.unlock();
+    mutex_t_unlock(_mutex);
     return ret;
 }
 bool job_manager_t::cancel_job(const char* key) {
     bool ret = false;
-    _mutex.lock();
+    mutex_t_lock(_mutex);
 
     for (jobs_t::iterator it = _background_jobs.begin();
-         it != _background_jobs.end(); it++) {
+         it != _background_jobs.end();
+         it++) {
         job_t* job = *it;
 
         if (!job->cancelled() &&
@@ -157,14 +158,13 @@ bool job_manager_t::cancel_job(const char* key) {
         }
     }
 
-    _mutex.unlock();
+    mutex_t_unlock(_mutex);
     return ret;
 }
 void job_manager_t::iterate_jobs(pfn_iterate_t callback, void* extra) const {
-
     char database[256], table[256], type[256], params[256], status[256];
 
-    _mutex.lock();
+    mutex_t_lock(_mutex);
 
     for (jobs_t::const_iterator it = _background_jobs.begin();
          it != _background_jobs.end();
@@ -187,7 +187,7 @@ void job_manager_t::iterate_jobs(pfn_iterate_t callback, void* extra) const {
         }
     }
 
-    _mutex.unlock();
+    mutex_t_unlock(_mutex);
 }
 void* job_manager_t::thread_func(void* v) {
     return ((tokudb::background::job_manager_t*)v)->real_thread_func();
@@ -205,14 +205,14 @@ void* job_manager_t::real_thread_func() {
                 tokudb::time::sleep_microsec(250000);
                 continue;
             }
-#endif // TOKUDB_DEBUG
+#endif  // TOKUDB_DEBUG
 
-            _mutex.lock();
+            mutex_t_lock(_mutex);
             assert_debug(_background_jobs.size() > 0);
             job_t* job = _background_jobs.front();
             run(job);
             _background_jobs.pop_front();
-            _mutex.unlock();
+            mutex_t_unlock(_mutex);
             delete job;
         }
     }
@@ -221,11 +221,11 @@ void* job_manager_t::real_thread_func() {
 void job_manager_t::run(job_t* job) {
     assert_debug(_mutex.is_owned_by_me());
     if (!job->cancelled()) {
-        _mutex.unlock();
+        mutex_t_unlock(_mutex);
         // do job
         job->run();
         // done job
-        _mutex.lock();
+        mutex_t_lock(_mutex);
     }
     if (!job->cancelled()) {
         job->destroy();
