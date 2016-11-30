@@ -12,6 +12,8 @@ if (!$TOKUDB) {
 #
 # Check if --plugin-dir was setup for TokuDB
 #
-if (`SELECT CONCAT('--plugin-dir=', REPLACE(@@plugin_dir, '\\\\', '/')) != '$TOKUDB_OPT/'`) {
-  --skip TokuDB requires that --plugin-dir is set to the TokuDB plugin dir (either the .opt file does not contain \$TOKUDB_OPT or another plugin is in use)
+--let $pdcd_tested_dir=$TOKUDB_DIR
+--source include/plugin_dirs_contains_dir.inc
+if ( !$pdcd_found ) {
+ --skip TokuDB requires that --plugin-dir is set to the TokuDB plugin dir (either the .opt file does not contain \$TOKUDB_OPT or another plugin is in use)
 }
