@@ -28,6 +28,8 @@
 #define TOKUDB_BACKUP_PLUGIN_VERSION_STRING NULL
 #endif
 
+#define TIMESTAMP_SIZE ((4 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1 + 2 + 1) + 1)
+
 static char* tokudb_backup_plugin_version;
 static const char* tokudb_backup_exclude_default="(mysqld_safe\\.pid)+";
 
@@ -132,6 +134,27 @@ struct tokudb_backup_progress_extra {
     THD *_thd;
     char *_the_string;
 };
+
+static void tokudb_get_timestamp(char *out, size_t out_len) {
+  time_t t;
+  struct tm tm;
+
+  assert(out);
+  assert(out_len <= TIMESTAMP_SIZE);
+
+  t = time(NULL);
+  tm = *localtime(&t);
+
+  snprintf(out,
+           out_len,
+           "%04d-%02d-%02d-%02d-%02d-%02d",
+           tm.tm_year + 1900,
+           tm.tm_mon + 1,
+           tm.tm_mday,
+           tm.tm_hour,
+           tm.tm_min,
+           tm.tm_sec);
+}
 
 static int tokudb_backup_progress_fun(float progress, const char *progress_string, void *extra) {
     tokudb_backup_progress_extra *be = static_cast<tokudb_backup_progress_extra *>(extra);
@@ -619,17 +642,24 @@ static void tokudb_backup_run(THD *thd, const char *dest_dir) {
 
     struct destination_dirs destinations(dest_dir);
     int index = 0;
-    destinations.set_backup_subdir("/mysql_data_dir", index);
+    char timestamp[TIMESTAMP_SIZE];
+    char subdir[FN_REFLEN];
+    tokudb_get_timestamp(timestamp, sizeof(timestamp));
+    snprintf(subdir, sizeof(subdir), "/%s_mysql_data_dir", timestamp);
+    destinations.set_backup_subdir(subdir, index);
     if (sources.tokudb_data_set) {
-       destinations.set_backup_subdir("/tokudb_data_dir", ++index);
+       snprintf(subdir, sizeof(subdir), "/%s_tokudb_data_dir", timestamp);
+       destinations.set_backup_subdir(subdir, ++index);
     }
 
     if (sources.tokudb_log_set) {
-       destinations.set_backup_subdir("/tokudb_log_dir", ++index);
+       snprintf(subdir, sizeof(subdir), "/%s_tokudb_log_dir", timestamp);
+       destinations.set_backup_subdir(subdir, ++index);
     }
 
     if (sources.log_bin_set) {
-        destinations.set_backup_subdir("/mysql_log_bin", ++index);
+        snprintf(subdir, sizeof(subdir), "/%s_mysql_log_bin", timestamp);
+        destinations.set_backup_subdir(subdir, ++index);
     }
 
     error = destinations.create_dirs();
