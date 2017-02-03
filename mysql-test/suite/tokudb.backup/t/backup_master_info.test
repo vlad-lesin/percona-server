@@ -2,9 +2,9 @@
 --source include/not_gtid_enabled.inc
 
 
---let $BINLOG_POS_FILE=tokubackup_slave_info
+--let $SLAVE_INFO_FILE=tokubackup_slave_info
 --let $BACKUP_DIR_SLAVE=$MYSQL_TMP_DIR/tokudb_backup_slave
---let $BINLOG_POS_FILE_PATH=$BACKUP_DIR_SLAVE/$BINLOG_POS_FILE
+--let $SLAVE_INFO_FILE_PATH=$BACKUP_DIR_SLAVE/$SLAVE_INFO_FILE
 --let DDIR=$BACKUP_DIR_SLAVE
 
 # Settings for include/filter_file.inc
@@ -21,7 +21,7 @@ let $script=
   s{executed gtid set: [^,]+,[^,]+, }{executed gtid set: ####,####, };
 |
 --delimiter ;
---let $input_file = $BINLOG_POS_FILE_PATH
+--let $input_file = $SLAVE_INFO_FILE_PATH
 --let $skip_column_names= 1
 
 --echo ###
@@ -45,8 +45,8 @@ DROP TABLE t1;
 --enable_query_log
 
 --source include/filter_file.inc
---echo ### $BINLOG_POS_FILE content:
---cat_file $BINLOG_POS_FILE_PATH
+--echo ### $SLAVE_INFO_FILE content:
+--cat_file $SLAVE_INFO_FILE_PATH
 
 --perl
 use File::Path 'rmtree';
@@ -77,8 +77,8 @@ DROP TABLE t1;
 --enable_query_log
 
 --source include/filter_file.inc
---echo ### $BINLOG_POS_FILE content:
---cat_file $BINLOG_POS_FILE_PATH
+--echo ### $SLAVE_INFO_FILE content:
+--cat_file $SLAVE_INFO_FILE_PATH
 
 --perl
 use File::Path 'rmtree';
