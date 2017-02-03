@@ -96,6 +96,13 @@ struct tokudb_backup_master_info {
     std::string channel_name;
 };
 
+struct tokudb_backup_master_state {
+    std::string file_name;
+    my_off_t position;
+    std::string executed_gtid_set;
+    enum_gtid_mode gtid_mode;
+};
+
 #ifdef TOKUDB_BACKUP_PLUGIN_VERSION
 #define stringify2(x) #x
 #define stringify(x) stringify2(x)
@@ -108,6 +115,7 @@ static char* tokudb_backup_plugin_version;
 static const char* tokudb_backup_exclude_default="(mysqld_safe\\.pid)+";
 
 static const char* master_info_file_name = "tokubackup_slave_info";
+static const char* master_state_file_name = "tokubackup_binlog_info";
 // This is just a place holder for now and must be replaced soon with a proper
 // PSI key for this plugin.
 static PSI_memory_key tokudb_backup_mem_key = 0;
@@ -293,9 +301,9 @@ static void tokudb_backup_before_stop_capt_fun(void *arg) {
     (void)lock_binlog_for_backup(thd);
 }
 
-static void tokudb_backup_store_master_info(
+static void tokudb_backup_get_master_info(
     Master_info *mi,
-    char* sql_gtid_set_buffer,
+    const std::string &executed_gtid_set,
     std::vector<tokudb_backup_master_info> *master_info_channels) {
 
     channel_map.assert_some_lock();
@@ -321,39 +329,44 @@ static void tokudb_backup_store_master_info(
     tbmi.relay_log_file.assign(mi->rli->get_group_relay_log_name() +
         dirname_length(mi->rli->get_group_relay_log_name()));
     tbmi.exec_master_log_pos = mi->rli->get_group_master_log_pos();
-    tbmi.executed_gtid_set.assign(sql_gtid_set_buffer);
+    tbmi.executed_gtid_set.assign(executed_gtid_set);
     tbmi.channel_name.assign(mi->get_channel());
-
-    std::string &str = tbmi.executed_gtid_set;
-    str.erase(std::remove(str.begin(), str.end(),'\n'), str.end());
 
     master_info_channels->push_back(tbmi);
 }
 
-static void tokudb_backup_store_master_infos(
-    THD *thd,
-    std::vector<tokudb_backup_master_info> *master_info_channels) {
-
-    Master_info *mi;
+std::string tokudb_backup_get_executed_gtids_set() {
     char* sql_gtid_set_buffer = NULL;
-
-    scoped_lock_wrapper<Multisource_info_lockable>
-        with_channel_map_rdlock(
-            Multisource_info_lockable(channel_map,
-                                      &Multisource_info::rdlock,
-                                      &Multisource_info::unlock));
+    std::string result;
     {
-
         scoped_lock_wrapper<Checkable_rwlock_lockable>
             with_global_sid_lock_wrlock(
                 Checkable_rwlock_lockable(*global_sid_lock,
                                      &Checkable_rwlock::wrlock,
                                      &Checkable_rwlock::unlock));
 
-
         const Gtid_set *sql_gtid_set= gtid_state->get_executed_gtids();
         (void)sql_gtid_set->to_string(&sql_gtid_set_buffer);
     }
+    result.assign(sql_gtid_set_buffer);
+    result.erase(std::remove(result.begin(), result.end(),'\n'), result.end());
+    return result;
+};
+
+static void tokudb_backup_get_master_infos(
+    THD *thd,
+    std::vector<tokudb_backup_master_info> *master_info_channels) {
+
+    std::string executed_gtid_set;
+    Master_info *mi;
+
+    scoped_lock_wrapper<Multisource_info_lockable>
+        with_channel_map_rdlock(
+            Multisource_info_lockable(channel_map,
+                                      &Multisource_info::rdlock,
+                                      &Multisource_info::unlock));
+
+    executed_gtid_set = tokudb_backup_get_executed_gtids_set();
 
     /* Run through each mi */
     for (mi_map::iterator it = channel_map.begin();
@@ -362,15 +375,31 @@ static void tokudb_backup_store_master_infos(
     {
         mi= it->second;
         if (mi != NULL && mi->host[0])
-            tokudb_backup_store_master_info(mi,
-                                            sql_gtid_set_buffer,
-                                            master_info_channels);
+            tokudb_backup_get_master_info(mi,
+                                          executed_gtid_set,
+                                          master_info_channels);
     }
+}
+
+
+void tokudb_backup_get_master_state(
+    tokudb_backup_master_state *master_state) {
+    LOG_INFO li;
+    mysql_bin_log.get_current_log(&li);
+
+    master_state->file_name =
+        (li.log_file_name + dirname_length(li.log_file_name));
+    master_state->position = li.pos;
+    master_state->executed_gtid_set = tokudb_backup_get_executed_gtids_set();
+    master_state->gtid_mode = get_gtid_mode(GTID_MODE_LOCK_NONE);
+
+    return;
 }
 
 struct tokudb_backup_after_stop_capt_extra {
     THD *thd;
     std::vector<tokudb_backup_master_info> *master_info_channels;
+    tokudb_backup_master_state *master_state;
 };
 
 static void tokudb_backup_after_stop_capt_fun(void *arg) {
@@ -379,8 +408,10 @@ static void tokudb_backup_after_stop_capt_fun(void *arg) {
     THD *thd = extra->thd;
     std::vector<tokudb_backup_master_info> *master_info_channels =
         extra->master_info_channels;
+    tokudb_backup_master_state *master_state = extra->master_state;
 
-    tokudb_backup_store_master_infos(thd, master_info_channels);
+    tokudb_backup_get_master_infos(thd, master_info_channels);
+    tokudb_backup_get_master_state(master_state);
 
     if (thd->backup_binlog_lock.is_acquired())
       thd->backup_binlog_lock.release(thd);
@@ -759,6 +790,113 @@ private:
     destination_dirs() {};
 };
 
+int tokudb_backup_save_master_infos(
+    THD *thd,
+    const char *dest_dir,
+    const std::vector<tokudb_backup_master_info> &master_info_channels) {
+
+    int error = 0;
+    std::string mi_full_file_name(dest_dir);
+    mi_full_file_name.append("/");
+    mi_full_file_name.append(master_info_file_name);
+
+    int fd = open(mi_full_file_name.c_str(),
+                  O_WRONLY|O_CREAT,
+                  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+    if (fd < 0) {
+        error = errno;
+        tokudb_backup_set_error_string(
+            thd, error, "Can't open master info file %s\n",
+            mi_full_file_name.c_str(), NULL, NULL);
+        return error;
+    }
+
+    for (std::vector<tokudb_backup_master_info>::const_iterator i =
+            master_info_channels.begin(), end = master_info_channels.end();
+        i != end;
+        ++i) {
+
+        std::stringstream out;
+        out << "host: " << i->host << ", "
+            << "user: " << i->user << ", "
+            << "port: " << i->port << ", "
+            << "master log file: " << i->master_log_file << ", "
+            << "relay log file: " << i->relay_log_file << ", "
+            << "exec master log pos: " << i->exec_master_log_pos << ", "
+            << "executed gtid set: " << i->executed_gtid_set << ", "
+            << "channel name: " << i->channel_name << std::endl;
+        const std::string &out_str = out.str();
+        if (write(fd, out_str.c_str(), out_str.length()) <
+            (int)out_str.length())
+        {
+            error = EINVAL;
+            tokudb_backup_set_error_string(
+                thd, error, "Master info was not written fully",
+                NULL, NULL, NULL);
+            break;
+        }
+    }
+
+    if (close(fd) < 0) {
+        error = errno;
+        tokudb_backup_set_error_string(
+            thd, error, "Can't close master info file %s\n",
+            mi_full_file_name.c_str(), NULL, NULL);
+    }
+
+    return error;
+}
+
+int tokudb_backup_save_master_state(
+    THD *thd,
+    const char *dest_dir,
+    const tokudb_backup_master_state &master_state) {
+
+    int error = 0;
+    std::string ms_full_file_name(dest_dir);
+    ms_full_file_name.append("/");
+    ms_full_file_name.append(master_state_file_name);
+
+    int fd = open(ms_full_file_name.c_str(),
+                  O_WRONLY|O_CREAT,
+                  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+    if (fd < 0) {
+        error = errno;
+        tokudb_backup_set_error_string(
+            thd, error, "Can't open master state file %s\n",
+            ms_full_file_name.c_str(), NULL, NULL);
+        return error;
+    }
+
+    std::stringstream out;
+    out << "filename: " << master_state.file_name << ", "
+        << "position: " << master_state.position << ", "
+        << "gtid_mode: "
+        << get_gtid_mode_string(master_state.gtid_mode) << ", "
+        << "GTID of last change: " << master_state.executed_gtid_set
+        << std::endl;
+
+    const std::string &out_str = out.str();
+    if (write(fd, out_str.c_str(), out_str.length()) <
+        (int)out_str.length())
+    {
+        error = EINVAL;
+        tokudb_backup_set_error_string(
+            thd, error, "Master state was not written fully",
+            NULL, NULL, NULL);
+    }
+
+    if (close(fd) < 0) {
+        error = errno;
+        tokudb_backup_set_error_string(
+            thd, error, "Can't close master state file %s\n",
+            ms_full_file_name.c_str(), NULL, NULL);
+    }
+
+    return error;
+
+}
+
 static void tokudb_backup_run(THD *thd, const char *dest_dir) {
     int error = 0;
 
@@ -838,12 +976,15 @@ static void tokudb_backup_run(THD *thd, const char *dest_dir) {
     tokubackup_throttle_backup(THDVAR(thd, throttle));
 
     std::vector<tokudb_backup_master_info> master_info_channels;
+    tokudb_backup_master_state master_state;
 
     // do the backup
     tokudb_backup_progress_extra progress_extra = { thd, NULL };
     tokudb_backup_error_extra error_extra = { thd };
     tokudb_backup_exclude_copy_extra exclude_copy_extra = { thd, exclude_string, &exclude_re };
-    tokudb_backup_after_stop_capt_extra asce = {thd, &master_info_channels};
+    tokudb_backup_after_stop_capt_extra asce = {thd,
+                                                &master_info_channels,
+                                                &master_state};
     error = tokubackup_create_backup(source_dirs,
                                      dest_dirs,
                                      count,
@@ -861,55 +1002,18 @@ static void tokudb_backup_run(THD *thd, const char *dest_dir) {
     if (exclude_string)
         regfree(&exclude_re);
 
-    if (!master_info_channels.empty()) {
-        std::string mi_full_file_name(dest_dir);
-        mi_full_file_name.append("/");
-        mi_full_file_name.append(master_info_file_name);
+    if (!master_info_channels.empty() &&
+        (error = tokudb_backup_save_master_infos(thd,
+                                                 dest_dir,
+                                                 master_info_channels)))
+        goto exit;
 
-        int fd = open(mi_full_file_name.c_str(),
-                      O_WRONLY|O_CREAT,
-                      S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
-        if (fd < 0) {
-            error = errno;
-            tokudb_backup_set_error_string(
-                thd, error, "Can't open master info file %s\n",
-                mi_full_file_name.c_str(), NULL, NULL);
-            goto exit;
-        }
+    if (!master_state.file_name.empty() &&
+        (error = tokudb_backup_save_master_state(thd,
+                                                 dest_dir,
+                                                 master_state)))
+        goto exit;
 
-        for (std::vector<tokudb_backup_master_info>::iterator i =
-                master_info_channels.begin(), end = master_info_channels.end();
-            i != end;
-            ++i) {
-
-            std::stringstream out;
-            out << "host: " << i->host << ", "
-                << "user: " << i->user << ", "
-                << "port: " << i->port << ", "
-                << "master log file: " << i->master_log_file << ", "
-                << "relay log file: " << i->relay_log_file << ", "
-                << "exec master log pos: " << i->exec_master_log_pos << ", "
-                << "executed gtid set: " << i->executed_gtid_set << ", "
-                << "channel name: " << i->channel_name << std::endl;
-            const std::string &out_str = out.str();
-            if (write(fd, out_str.c_str(), out_str.length()) <
-                (int)out_str.length())
-            {
-                error = EINVAL;
-                tokudb_backup_set_error_string(
-                    thd, error, "Master info was not written fully",
-                    NULL, NULL, NULL);
-                goto exit;
-            }
-        }
-
-        if (close(fd) < 0) {
-            error = errno;
-            tokudb_backup_set_error_string(
-                thd, error, "Can't close master info file %s\n",
-                mi_full_file_name.c_str(), NULL, NULL);
-        }
-    }
 exit:
     // cleanup
     thd_proc_info(thd, "tokudb backup done"); // must be a static string
