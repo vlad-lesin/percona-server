@@ -128,9 +128,7 @@ static void report_errors(SSL *ssl) {
                          file, line, (flags & ERR_TXT_STRING) ? data : ""));
   }
 
-  if (ssl)
-    DBUG_PRINT("error",
-               ("error: %s", ERR_error_string(SSL_get_error(ssl, l), buf)));
+  if (ssl) DBUG_PRINT("error", ("SSL_get_error: %d", SSL_get_error(ssl, l)));
 
   DBUG_PRINT("info", ("socket_errno: %d", socket_errno));
   DBUG_VOID_RETURN;
@@ -210,6 +208,8 @@ static bool ssl_should_retry(Vio *vio, int ret, enum enum_vio_io_event *event,
   /* Retrieve the result for the SSL I/O operation. */
   ssl_error = SSL_get_error(ssl, ret);
 
+  *ssl_errno_holder = ERR_peek_error();
+
   /* Retrieve the result for the SSL I/O operation. */
   switch (ssl_error) {
     case SSL_ERROR_WANT_READ:
@@ -229,8 +229,6 @@ static bool ssl_should_retry(Vio *vio, int ret, enum enum_vio_io_event *event,
       ssl_set_sys_error(ssl_error);
       break;
   }
-
-  *ssl_errno_holder = ssl_error;
 
   return should_retry;
 }
