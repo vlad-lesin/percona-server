@@ -35,6 +35,7 @@
 #include "sql/auth/auth_acls.h"
 #include "sql/auth/auth_common.h"     // check_table_access
 #include "sql/binlog.h"               // mysql_bin_log
+#include "sql/debug_sync.h"           // DEBUG_SYNC
 #include "sql/enum_query_type.h"
 #include "sql/error_handler.h"        // Strict_error_handler
 #include "sql/field.h"
@@ -435,6 +436,8 @@ bool sp_lex_instr::reset_lex_and_exec_core(THD *thd,
     }
     else
     {
+      DEBUG_SYNC(thd, "sp_before_exec_core");
+
       error= exec_core(thd, nextp);
       DBUG_PRINT("info",("exec_core returned: %d", error));
     }
