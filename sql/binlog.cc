@@ -4652,8 +4652,6 @@ bool MYSQL_BIN_LOG::open_binlog(
 
   DBUG_PRINT("info", ("generated filename: %s", log_file_name));
 
-  DEBUG_SYNC(current_thd, "after_log_file_name_initialized");
-
   if (open_purge_index_file(true) ||
       register_create_index_entry(log_file_name) || sync_purge_index_file() ||
       DBUG_EVALUATE_IF("fault_injection_registering_index", 1, 0)) {
