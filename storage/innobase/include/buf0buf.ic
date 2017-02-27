@@ -863,6 +863,7 @@ void buf_block_buf_fix_inc_func(
 @return	the remaining buffer-fix count */
 UNIV_INLINE
 ulint buf_block_unfix(buf_page_t *bpage) {
+  ut_ad(!mutex_own(buf_page_get_mutex(bpage)));
   ib_uint32_t count;
   count = os_atomic_decrement_uint32(&bpage->buf_fix_count, 1);
   ut_ad(count + 1 != 0);
