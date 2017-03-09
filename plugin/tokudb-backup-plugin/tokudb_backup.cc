@@ -476,7 +476,6 @@ static void tokudb_backup_get_master_infos(
     THD *thd,
     std::vector<tokudb_backup_master_info> *master_info_channels) {
 
-    Master_info *mi = active_mi;
     tokudb_backup_master_info tbmi;
 
     {
@@ -484,7 +483,9 @@ static void tokudb_backup_get_master_infos(
             with_LOCK_active_mi_locked(
             BasicLockableMysqlMutextT(&LOCK_active_mi));
 
-        if (!active_mi)
+        Master_info *mi = active_mi;
+
+        if (!mi || !mi->host || !mi->host[0])
             return;
 
         std::string executed_gtid_set = tokudb_backup_get_executed_gtids_set();
