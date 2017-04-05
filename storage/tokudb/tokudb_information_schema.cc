@@ -96,7 +96,7 @@ int trx_fill_table(THD* thd, TABLE_LIST* tables, COND* cond) {
     TOKUDB_DBUG_ENTER("");
     int error;
 
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
@@ -231,7 +231,7 @@ int lock_waits_fill_table(THD* thd, TABLE_LIST* tables, COND* cond) {
     TOKUDB_DBUG_ENTER("");
     int error;
 
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
@@ -373,7 +373,7 @@ int locks_fill_table(THD* thd, TABLE_LIST* tables, COND* cond) {
     TOKUDB_DBUG_ENTER("");
     int error;
 
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
@@ -517,7 +517,7 @@ int file_map_fill_table(THD* thd, TABLE_LIST* tables, COND* cond) {
     int error;
     TABLE* table = tables->table;
 
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
@@ -724,7 +724,7 @@ int fractal_tree_info_fill_table(THD* thd, TABLE_LIST* tables, COND* cond) {
 
     // 3938: Get a read lock on the status flag, since we must
     // read it before safely proceeding
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
@@ -1021,7 +1021,7 @@ int fractal_tree_block_map_fill_table(
 
     // 3938: Get a read lock on the status flag, since we must
     // read it before safely proceeding
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
@@ -1158,7 +1158,7 @@ int background_job_status_fill_table(THD *thd, TABLE_LIST *tables, COND *cond) {
     int error;
     TABLE* table = tables->table;
 
-    tokudb_hton_initialized_lock.lock_read();
+    rwlock_t_lock_read(tokudb_hton_initialized_lock);
 
     if (!tokudb_hton_initialized) {
         error = ER_PLUGIN_IS_NOT_LOADED;
