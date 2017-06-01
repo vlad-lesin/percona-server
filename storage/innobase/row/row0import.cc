@@ -1319,12 +1319,15 @@ row_import::match_schema(
 	THD*		thd) UNIV_NOTHROW
 {
 	/* Do some simple checks. */
+	const auto relevant_flags = m_flags & ~DICT_TF_MASK_DATA_DIR;
+	const auto relevant_table_flags
+		= m_table->flags & ~DICT_TF_MASK_DATA_DIR;
 
-	if (m_flags != m_table->flags) {
+	if (relevant_flags != relevant_table_flags) {
 		ib_errf(thd, IB_LOG_LEVEL_ERROR, ER_TABLE_SCHEMA_MISMATCH,
-			 "Table flags don't match, server table has 0x%lx"
-			 " and the meta-data file has 0x%lx",
-			 (ulong) m_table->n_cols, (ulong) m_flags);
+			 "Table flags don't match, server table has 0x%x "
+			 "and the meta-data file has 0x%lx",
+			 relevant_table_flags, relevant_flags);
 
 		return(DB_ERROR);
 	} else if (m_table->n_cols != m_n_cols) {
@@ -3930,7 +3933,8 @@ row_import_for_mysql(
 		btr_sdi_create_index(table->space, true);
 		dict_mutex_exit_for_mysql();
 	} else {
-		ut_ad(space->flags == space_flags_from_disk);
+		ut_ad((space->flags & ~FSP_FLAGS_MASK_DATA_DIR)
+		      == (space_flags_from_disk & ~FSP_FLAGS_MASK_DATA_DIR));
 	}
 
 	if (dict_table_is_encrypted(table)) {
