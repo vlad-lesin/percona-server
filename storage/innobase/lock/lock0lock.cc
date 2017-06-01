@@ -7060,8 +7060,6 @@ const trx_t *DeadlockChecker::check_and_resolve(const lock_t *lock,
 
       rollback_print(victim_trx, lock);
 
-      MONITOR_INC(MONITOR_DEADLOCK);
-
       break;
 
     } else if (victim_trx != NULL && victim_trx != trx) {
@@ -7081,6 +7079,8 @@ const trx_t *DeadlockChecker::check_and_resolve(const lock_t *lock,
     print("*** WE ROLL BACK TRANSACTION (2)\n");
 
     lock_deadlock_found = true;
+
+    MONITOR_INC(MONITOR_DEADLOCK);
   }
 
   trx_mutex_enter(trx);
