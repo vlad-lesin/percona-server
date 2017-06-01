@@ -518,7 +518,8 @@ UNIV_INLINE MY_ATTRIBUTE((warn_unused_result)) xdes_t
           (srv_startup_is_before_trx_rollback_phase &&
            fsp_is_undo_tablespace(fspace->id)))));
   ut_ad(size == fspace->size_in_header);
-  ut_ad(flags == fspace->flags);
+  ut_ad((flags & ~FSP_FLAGS_MASK_DATA_DIR) ==
+        (fspace->flags & ~FSP_FLAGS_MASK_DATA_DIR));
 
   if ((offset >= size) || (offset >= limit)) {
     return (NULL);

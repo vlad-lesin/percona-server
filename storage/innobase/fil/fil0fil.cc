@@ -2286,7 +2286,11 @@ dberr_t Fil_shard::get_file_size(fil_node_t *file, bool read_only_mode) {
   space->flags |= flags & FSP_FLAGS_MASK_SDI;
   /* ut_ad(space->flags == flags); */
 
-  if (space->flags != flags) {
+  /* Do not compare the data directory flag, in case this tablespace was
+  relocated. */
+  const auto relevant_space_flags = space->flags & ~FSP_FLAGS_MASK_DATA_DIR;
+  const auto relevant_flags = flags & ~FSP_FLAGS_MASK_DATA_DIR;
+  if (UNIV_UNLIKELY(relevant_space_flags != relevant_flags)) {
     ib::fatal(ER_IB_MSG_272, space->flags, file->name, flags);
   }
 
