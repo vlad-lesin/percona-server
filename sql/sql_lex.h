@@ -3240,9 +3240,12 @@ public:
   bool subqueries;
 private:
   bool ignore;
+  bool noar;
 public:
   bool is_ignore() const { return ignore; }
   void set_ignore(bool ignore_param) { ignore= ignore_param; }
+  bool is_noar() const { return noar; }
+  void set_noar(bool noar_param) { noar= noar_param; }
   st_parsing_options parsing_options;
   Alter_info alter_info;
   /*

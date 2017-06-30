@@ -10,6 +10,9 @@ create table t (id int primary key, b int, key(b));
 
 set tokudb_disable_slow_update=1;
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 replace_regex /MariaDB/XYZ/ /MySQL/XYZ/;
 --error ER_UNSUPPORTED_EXTENSION
 update noar t set b=b+1 where id=42;

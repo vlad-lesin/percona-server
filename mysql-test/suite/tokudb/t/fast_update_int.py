@@ -7,6 +7,9 @@ def main():
     print "source include/have_tokudb.inc;"
     print "source include/have_innodb.inc;"
     print "set default_storage_engine='tokudb';"
+    print "set tokudb_disable_slow_update=1;"
+    print "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));"
+    print "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));"
     print "disable_warnings;"
     print "drop table if exists t;"
     print "enable_warnings;"
@@ -19,14 +22,12 @@ def main():
 
 def test_int(t, u, n):
     print "create table t ("
-    print "    id %s %s %s primary key," % (t, u, n)
+    print "    id %s %s primary key," % (t, u)
     print "    x %s %s %s" % (t, u, n)
     print ");"
 
     print "insert into t values (1,0),(2,0),(3,0);"
     print "select * from t;"
-
-    print "set tokudb_disable_slow_update=1;"
 
     # set is fast
     print "update noar t set x=100 where id=2;"

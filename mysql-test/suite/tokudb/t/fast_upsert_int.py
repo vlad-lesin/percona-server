@@ -13,6 +13,12 @@ def main():
 
     print "set tokudb_disable_slow_update=1;"
 
+#    print "SET sql_mode=(SELECT REPLACE(@@sql_mode,'NO_ZERO_DATE',''));"
+#    print "SET sql_mode=(SELECT REPLACE(@@sql_mode,'NO_ZERO_IN_DATE',''));"
+#    print "SET sql_mode=(SELECT REPLACE(@@sql_mode,'ERROR_FOR_DIVISION_BY_ZERO',''));"
+    print "SET sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));"
+    print "SET sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));"
+
     for t in [ 'tinyint', 'smallint', 'mediumint', 'int', 'bigint' ]:
         for u in [ '', 'unsigned' ]:
             for n in [ 'null', 'not null' ]:
@@ -21,7 +27,7 @@ def main():
 
 def test_upsert_int(t, u, n):
     print "create table tt ("
-    print "    id %s %s %s primary key," % (t, u, n)
+    print "    id %s %s primary key," % (t, u)
     if n == 'not null': n += ' default 0'
     print "    x %s %s %s," % (t, u, n)
     print "    y %s %s %s," % (t, u, n)
@@ -30,17 +36,17 @@ def test_upsert_int(t, u, n):
     print ");"
     print "insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;"
     print "insert noar into tt (id) values (1) on duplicate key update y=0,z=42;"
-    print "insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;"
+    print "insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;"
     print "insert noar into tt (id) values (1) on duplicate key update y=y-1;"
-    print "insert noar into tt (id) values (1) on duplicate key update z=z-100;"
+    print "insert noar into tt (id) values (1) on duplicate key update z=z-50;"
 
     print "create table ti like tt;"
     print "alter table ti engine=innodb;"
     print "insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;"
     print "insert noar into ti (id) values (1) on duplicate key update y=0,z=42;"
-    print "insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;"
+    print "insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;"
     print "insert noar into ti (id) values (1) on duplicate key update y=y-1;"
-    print "insert noar into ti (id) values (1) on duplicate key update z=z-100;"
+    print "insert noar into ti (id) values (1) on duplicate key update z=z-50;"
 
     print "let $diff_tables = test.tt, test.ti;"
     print "source include/diff_tables.inc;"

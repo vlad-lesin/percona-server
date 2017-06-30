@@ -7,6 +7,9 @@ create table tt (id int primary key, x int);
 
 set session tokudb_disable_slow_upsert=1;
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 connection master;
 show variables like 'binlog_format';
 show variables like 'server_id';

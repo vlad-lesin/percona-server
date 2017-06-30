@@ -1,6 +1,12 @@
 set default_storage_engine='tokudb';
 drop table if exists tt, ti;
 set tokudb_disable_slow_upsert=1;
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
 create table tt (id int primary key, c char(32), b binary(32));
 create table ti like tt;
 alter table ti engine=innodb;

@@ -766,7 +766,16 @@ bool Sql_cmd_insert::mysql_insert(THD *thd,TABLE_LIST *table_list)
       error= 1;
       break;
     }
-    error= write_record(thd, insert_table, &info, &update);
+//    error= write_record(thd, insert_table, &info, &update);
+    {
+      error= ENOTSUP;
+      if (thd->lex->is_noar())
+        error= insert_table->file->ha_upsert(thd,
+                                             insert_update_list,
+                                             insert_value_list);
+      if (error == ENOTSUP)
+        error= write_record(thd, insert_table, &info, &update);
+    }
     if (error)
       break;
     thd->get_stmt_da()->inc_current_row_for_condition();

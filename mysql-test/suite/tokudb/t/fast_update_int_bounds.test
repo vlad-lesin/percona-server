@@ -15,6 +15,9 @@ insert into ti select * from tt;
 
 set tokudb_disable_slow_update=1;
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 update noar tt set x=x+1 where id=1;
 update noar ti set x=x+1 where id=1;
 let $diff_tables = test.tt, test.ti;

@@ -10,6 +10,9 @@ enable_warnings;
 
 set tokudb_disable_slow_upsert=1;
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 create table t (id int primary key, x int not null);
 
 insert noar into t values (1,1);

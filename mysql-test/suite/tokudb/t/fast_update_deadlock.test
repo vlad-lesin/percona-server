@@ -6,6 +6,9 @@ enable_warnings;
 
 set default_storage_engine='tokudb';
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 create table t (id bigint primary key, b bigint not null default 0);
 insert into t (id) values (1),(2);
 

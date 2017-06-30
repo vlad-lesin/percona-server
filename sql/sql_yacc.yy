@@ -843,6 +843,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, YYLTYPE **c, ulong *yystacksize);
 %token  NEVER_SYM
 %token  NEW_SYM                       /* SQL-2003-R */
 %token  NEXT_SYM                      /* SQL-2003-N */
+%token  NOAR_SYM
 %token  NODEGROUP_SYM
 %token  NONE_SYM                      /* SQL-2003-R */
 %token  NOT2_SYM
@@ -1420,7 +1421,7 @@ END_OF_INPUT
 %type <xa_option_type> opt_suspend;
 %type <xa_option_type> opt_one_phase;
 
-%type <is_not_empty> opt_convert_xid opt_ignore
+%type <is_not_empty> opt_convert_xid opt_ignore opt_noar
 
 %type <NONE>
         '-' '+' '*' '/' '%' '(' ')'
@@ -8539,6 +8540,11 @@ opt_ignore:
         | IGNORE_SYM  { $$= true; }
         ;
 
+opt_noar:
+          /* empty */ { $$= false; }
+        | NOAR_SYM    { $$= true; }
+        ;
+
 opt_restrict:
           /* empty */ { Lex->drop_mode= DROP_DEFAULT; }
         | RESTRICT    { Lex->drop_mode= DROP_RESTRICT; }
@@ -11482,48 +11488,51 @@ insert_stmt:
           INSERT                       /* #1 */
           insert_lock_option           /* #2 */
           opt_ignore                   /* #3 */
-          opt_INTO                     /* #4 */
-          table_ident                  /* #5 */
-          opt_use_partition            /* #6 */
-          insert_from_constructor      /* #7 */
-          opt_insert_update_list       /* #8 */
-          {
-            $$= NEW_PTN PT_insert(false, $1, $2, $3, $5, $6,
-                                  $7.column_list, $7.row_value_list,
-                                  NULL,
-                                  $8.column_list, $8.value_list);
-          }
-        | INSERT                       /* #1 */
-          insert_lock_option           /* #2 */
-          opt_ignore                   /* #3 */
-          opt_INTO                     /* #4 */
-          table_ident                  /* #5 */
-          opt_use_partition            /* #6 */
-          SET                          /* #7 */
-          update_list                  /* #8 */
+          opt_noar                     /* #4 */
+          opt_INTO                     /* #5 */
+          table_ident                  /* #6 */
+          opt_use_partition            /* #7 */
+          insert_from_constructor      /* #8 */
           opt_insert_update_list       /* #9 */
           {
-            PT_insert_values_list *one_row= NEW_PTN PT_insert_values_list;
-            if (one_row == NULL || one_row->push_back(&$8.value_list->value))
-              MYSQL_YYABORT; // OOM
-            $$= NEW_PTN PT_insert(false, $1, $2, $3, $5, $6,
-                                  $8.column_list, one_row,
+            $$= NEW_PTN PT_insert(false, $1, $2, $3, $6, $7,
+                                  $8.column_list, $8.row_value_list,
                                   NULL,
                                   $9.column_list, $9.value_list);
           }
         | INSERT                       /* #1 */
           insert_lock_option           /* #2 */
           opt_ignore                   /* #3 */
-          opt_INTO                     /* #4 */
-          table_ident                  /* #5 */
-          opt_use_partition            /* #6 */
-          insert_from_subquery         /* #7 */
-          opt_insert_update_list       /* #8 */
+          opt_noar                     /* #4 */
+          opt_INTO                     /* #5 */
+          table_ident                  /* #6 */
+          opt_use_partition            /* #7 */
+          SET                          /* #8 */
+          update_list                  /* #9 */
+          opt_insert_update_list       /* #10 */
           {
-            $$= NEW_PTN PT_insert(false, $1, $2, $3, $5, $6,
-                                  $7.column_list, NULL,
-                                  $7.insert_query_expression,
-                                  $8.column_list, $8.value_list);
+            PT_insert_values_list *one_row= NEW_PTN PT_insert_values_list;
+            if (one_row == NULL || one_row->push_back(&$9.value_list->value))
+              MYSQL_YYABORT; // OOM
+            $$= NEW_PTN PT_insert(false, $1, $2, $3, $6, $7,
+                                  $9.column_list, one_row,
+                                  NULL,
+                                  $10.column_list, $10.value_list);
+          }
+        | INSERT                       /* #1 */
+          insert_lock_option           /* #2 */
+          opt_ignore                   /* #3 */
+          opt_noar                     /* #4 */
+          opt_INTO                     /* #5 */
+          table_ident                  /* #6 */
+          opt_use_partition            /* #7 */
+          insert_from_subquery         /* #8 */
+          opt_insert_update_list       /* #9 */
+          {
+            $$= NEW_PTN PT_insert(false, $1, $2, $3, $6, $7,
+                                  $8.column_list, NULL,
+                                  $8.insert_query_expression,
+                                  $9.column_list, $9.value_list);
           }
         ;
 
@@ -11757,15 +11766,16 @@ update_stmt:
           UPDATE_SYM            /* #1 */
           opt_low_priority      /* #2 */
           opt_ignore            /* #3 */
-          join_table_list       /* #4 */
-          SET                   /* #5 */
-          update_list           /* #6 */
-          opt_where_clause      /* #7 */
-          opt_order_clause      /* #8 */
-          opt_simple_limit      /* #9 */
+          opt_noar              /* #4 */
+          join_table_list       /* #5 */
+          SET                   /* #6 */
+          update_list           /* #7 */
+          opt_where_clause      /* #8 */
+          opt_order_clause      /* #9 */
+          opt_simple_limit      /* #10 */
           {
-            $$= NEW_PTN PT_update($1, $2, $3, $4, $6.column_list, $6.value_list,
-                                  $7, $8, $9);
+            $$= NEW_PTN PT_update($1, $2, $3, $5, $7.column_list, $7.value_list,
+                                  $8, $9, $10);
           }
         ;
 

@@ -128,6 +128,7 @@ enum ha_extra_function {
   HA_EXTRA_RESET_STATE,			/* Reset positions */
   HA_EXTRA_IGNORE_DUP_KEY,		/* Dup keys don't rollback everything*/
   HA_EXTRA_NO_IGNORE_DUP_KEY,
+  HA_EXTRA_NOAR,
   HA_EXTRA_PREPARE_FOR_DROP,
   HA_EXTRA_PREPARE_FOR_UPDATE,		/* Remove read cache if problems */
   HA_EXTRA_PRELOAD_BUFFER_SIZE,         /* Set buffer size for preloading */

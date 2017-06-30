@@ -1,8 +1,14 @@
 set default_storage_engine='tokudb';
 drop table if exists t;
 set tokudb_disable_slow_update=1;
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
 create table tt (
-id tinyint  null primary key,
+id tinyint  primary key,
 x tinyint  null
 );
 insert into tt values (1,4);
@@ -13,7 +19,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id tinyint  not null primary key,
+id tinyint  primary key,
 x tinyint  not null
 );
 insert into tt values (1,4);
@@ -24,7 +30,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id tinyint unsigned null primary key,
+id tinyint unsigned primary key,
 x tinyint unsigned null
 );
 insert into tt values (1,4);
@@ -44,7 +50,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id tinyint unsigned not null primary key,
+id tinyint unsigned primary key,
 x tinyint unsigned not null
 );
 insert into tt values (1,4);
@@ -64,7 +70,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id smallint  null primary key,
+id smallint  primary key,
 x smallint  null
 );
 insert into tt values (1,4);
@@ -75,7 +81,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id smallint  not null primary key,
+id smallint  primary key,
 x smallint  not null
 );
 insert into tt values (1,4);
@@ -86,7 +92,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id smallint unsigned null primary key,
+id smallint unsigned primary key,
 x smallint unsigned null
 );
 insert into tt values (1,4);
@@ -106,7 +112,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id smallint unsigned not null primary key,
+id smallint unsigned primary key,
 x smallint unsigned not null
 );
 insert into tt values (1,4);
@@ -126,7 +132,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id mediumint  null primary key,
+id mediumint  primary key,
 x mediumint  null
 );
 insert into tt values (1,4);
@@ -137,7 +143,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id mediumint  not null primary key,
+id mediumint  primary key,
 x mediumint  not null
 );
 insert into tt values (1,4);
@@ -148,7 +154,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id mediumint unsigned null primary key,
+id mediumint unsigned primary key,
 x mediumint unsigned null
 );
 insert into tt values (1,4);
@@ -168,7 +174,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id mediumint unsigned not null primary key,
+id mediumint unsigned primary key,
 x mediumint unsigned not null
 );
 insert into tt values (1,4);
@@ -188,7 +194,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id int  null primary key,
+id int  primary key,
 x int  null
 );
 insert into tt values (1,4);
@@ -199,7 +205,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id int  not null primary key,
+id int  primary key,
 x int  not null
 );
 insert into tt values (1,4);
@@ -210,7 +216,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id int unsigned null primary key,
+id int unsigned primary key,
 x int unsigned null
 );
 insert into tt values (1,4);
@@ -230,7 +236,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id int unsigned not null primary key,
+id int unsigned primary key,
 x int unsigned not null
 );
 insert into tt values (1,4);
@@ -250,7 +256,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id bigint  null primary key,
+id bigint  primary key,
 x bigint  null
 );
 insert into tt values (1,4);
@@ -261,7 +267,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id bigint  not null primary key,
+id bigint  primary key,
 x bigint  not null
 );
 insert into tt values (1,4);
@@ -272,7 +278,7 @@ update noar tt set x=if(x=0,0,x-1) where id=1;
 ERROR 42000: Table 'tt' uses an extension that doesn't exist in this XYZ version
 drop table tt, ti;
 create table tt (
-id bigint unsigned null primary key,
+id bigint unsigned primary key,
 x bigint unsigned null
 );
 insert into tt values (1,4);
@@ -292,7 +298,7 @@ update noar ti set x=if(x=0,0,x-1) where id=1;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id bigint unsigned not null primary key,
+id bigint unsigned primary key,
 x bigint unsigned not null
 );
 insert into tt values (1,4);

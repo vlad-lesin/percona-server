@@ -12,6 +12,8 @@ def main():
     print "disable_warnings;"
     print "drop table if exists t;"
     print "enable_warnings;"
+    print "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));"
+    print "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));"
 
     nrows = 100
 

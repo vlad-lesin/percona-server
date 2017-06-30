@@ -5012,6 +5012,7 @@ public:
   bool eq(const Item *item, bool binary_cmp) const;
   bool fix_fields(THD *, Item **);
   virtual void print(String *str, enum_query_type query_type);
+  enum Type type() const { return INSERT_VALUE_ITEM; }
   /* 
    We use RAND_TABLE_BIT to prevent Item_insert_value from
    being treated as a constant and precalculated before execution

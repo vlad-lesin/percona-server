@@ -2,6 +2,12 @@ set default_storage_engine='tokudb';
 drop table if exists t;
 create table t (id int primary key, b int, key(b));
 set tokudb_disable_slow_update=1;
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
 update noar t set b=b+1 where id=42;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;

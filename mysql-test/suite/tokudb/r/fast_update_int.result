@@ -1,7 +1,14 @@
 set default_storage_engine='tokudb';
+set tokudb_disable_slow_update=1;
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
 drop table if exists t;
 create table t (
-id tinyint  null primary key,
+id tinyint  primary key,
 x tinyint  null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -10,7 +17,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -57,7 +63,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id tinyint  not null primary key,
+id tinyint  primary key,
 x tinyint  not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -66,7 +72,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -113,7 +118,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id tinyint unsigned null primary key,
+id tinyint unsigned primary key,
 x tinyint unsigned null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -122,7 +127,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -169,7 +173,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id tinyint unsigned not null primary key,
+id tinyint unsigned primary key,
 x tinyint unsigned not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -178,7 +182,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -225,7 +228,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id smallint  null primary key,
+id smallint  primary key,
 x smallint  null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -234,7 +237,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -281,7 +283,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id smallint  not null primary key,
+id smallint  primary key,
 x smallint  not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -290,7 +292,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -337,7 +338,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id smallint unsigned null primary key,
+id smallint unsigned primary key,
 x smallint unsigned null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -346,7 +347,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -393,7 +393,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id smallint unsigned not null primary key,
+id smallint unsigned primary key,
 x smallint unsigned not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -402,7 +402,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -449,7 +448,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id mediumint  null primary key,
+id mediumint  primary key,
 x mediumint  null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -458,7 +457,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -505,7 +503,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id mediumint  not null primary key,
+id mediumint  primary key,
 x mediumint  not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -514,7 +512,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -561,7 +558,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id mediumint unsigned null primary key,
+id mediumint unsigned primary key,
 x mediumint unsigned null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -570,7 +567,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -617,7 +613,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id mediumint unsigned not null primary key,
+id mediumint unsigned primary key,
 x mediumint unsigned not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -626,7 +622,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -673,7 +668,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id int  null primary key,
+id int  primary key,
 x int  null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -682,7 +677,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -729,7 +723,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id int  not null primary key,
+id int  primary key,
 x int  not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -738,7 +732,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -785,7 +778,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id int unsigned null primary key,
+id int unsigned primary key,
 x int unsigned null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -794,7 +787,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -841,7 +833,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id int unsigned not null primary key,
+id int unsigned primary key,
 x int unsigned not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -850,7 +842,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -897,7 +888,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id bigint  null primary key,
+id bigint  primary key,
 x bigint  null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -906,7 +897,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -953,7 +943,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id bigint  not null primary key,
+id bigint  primary key,
 x bigint  not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -962,7 +952,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -1009,7 +998,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id bigint unsigned null primary key,
+id bigint unsigned primary key,
 x bigint unsigned null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -1018,7 +1007,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x
@@ -1065,7 +1053,7 @@ update noar t set x=x+1;
 ERROR 42000: Table 't' uses an extension that doesn't exist in this XYZ version
 drop table t;
 create table t (
-id bigint unsigned not null primary key,
+id bigint unsigned primary key,
 x bigint unsigned not null
 );
 insert into t values (1,0),(2,0),(3,0);
@@ -1074,7 +1062,6 @@ id	x
 1	0
 2	0
 3	0
-set tokudb_disable_slow_update=1;
 update noar t set x=100 where id=2;
 select * from t;
 id	x

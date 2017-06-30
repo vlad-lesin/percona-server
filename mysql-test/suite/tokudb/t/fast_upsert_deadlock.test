@@ -4,6 +4,9 @@ disable_warnings;
 drop table if exists t;
 enable_warnings;
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 set default_storage_engine='tokudb';
 
 create table t (id bigint primary key, b bigint not null default 0);

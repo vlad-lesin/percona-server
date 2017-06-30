@@ -13,6 +13,9 @@ def main():
 
     print "set tokudb_disable_slow_update=1;"
 
+    print "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));"
+    print "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));"
+
     for t in [ 'tinyint', 'smallint', 'mediumint', 'int', 'bigint' ]:
         for u in [ '', 'unsigned' ]:
             for n in [ 'null', 'not null' ]:
@@ -21,7 +24,7 @@ def main():
 
 def test_int(t, u, n):
     print "create table tt ("
-    print "    id %s %s %s primary key," % (t, u, n)
+    print "    id %s %s primary key," % (t, u)
     print "    x %s %s %s" % (t, u, n)
     print ");"
 

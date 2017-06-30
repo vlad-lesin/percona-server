@@ -1,8 +1,14 @@
 set default_storage_engine='tokudb';
 drop table if exists tt, ti;
 set tokudb_disable_slow_update=1;
+SET sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
+SET sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+Warnings:
+Warning	3135	'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
 create table tt (
-id tinyint  null primary key,
+id tinyint  primary key,
 x tinyint  null,
 y tinyint  null,
 z tinyint  null,
@@ -10,22 +16,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
-Warnings:
-Warning	1264	Out of range value for column 'z' at row 1
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id tinyint  not null primary key,
+id tinyint  primary key,
 x tinyint  not null default 0,
 y tinyint  not null default 0,
 z tinyint  not null default 0,
@@ -33,22 +37,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
-Warnings:
-Warning	1264	Out of range value for column 'z' at row 1
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id tinyint unsigned null primary key,
+id tinyint unsigned primary key,
 x tinyint unsigned null,
 y tinyint unsigned null,
 z tinyint unsigned null,
@@ -56,20 +58,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id tinyint unsigned not null primary key,
+id tinyint unsigned primary key,
 x tinyint unsigned not null default 0,
 y tinyint unsigned not null default 0,
 z tinyint unsigned not null default 0,
@@ -77,20 +79,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id smallint  null primary key,
+id smallint  primary key,
 x smallint  null,
 y smallint  null,
 z smallint  null,
@@ -98,20 +100,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id smallint  not null primary key,
+id smallint  primary key,
 x smallint  not null default 0,
 y smallint  not null default 0,
 z smallint  not null default 0,
@@ -119,20 +121,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id smallint unsigned null primary key,
+id smallint unsigned primary key,
 x smallint unsigned null,
 y smallint unsigned null,
 z smallint unsigned null,
@@ -140,20 +142,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id smallint unsigned not null primary key,
+id smallint unsigned primary key,
 x smallint unsigned not null default 0,
 y smallint unsigned not null default 0,
 z smallint unsigned not null default 0,
@@ -161,20 +163,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id mediumint  null primary key,
+id mediumint  primary key,
 x mediumint  null,
 y mediumint  null,
 z mediumint  null,
@@ -182,20 +184,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id mediumint  not null primary key,
+id mediumint  primary key,
 x mediumint  not null default 0,
 y mediumint  not null default 0,
 z mediumint  not null default 0,
@@ -203,20 +205,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id mediumint unsigned null primary key,
+id mediumint unsigned primary key,
 x mediumint unsigned null,
 y mediumint unsigned null,
 z mediumint unsigned null,
@@ -224,20 +226,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id mediumint unsigned not null primary key,
+id mediumint unsigned primary key,
 x mediumint unsigned not null default 0,
 y mediumint unsigned not null default 0,
 z mediumint unsigned not null default 0,
@@ -245,20 +247,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id int  null primary key,
+id int  primary key,
 x int  null,
 y int  null,
 z int  null,
@@ -266,20 +268,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id int  not null primary key,
+id int  primary key,
 x int  not null default 0,
 y int  not null default 0,
 z int  not null default 0,
@@ -287,20 +289,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id int unsigned null primary key,
+id int unsigned primary key,
 x int unsigned null,
 y int unsigned null,
 z int unsigned null,
@@ -308,20 +310,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id int unsigned not null primary key,
+id int unsigned primary key,
 x int unsigned not null default 0,
 y int unsigned not null default 0,
 z int unsigned not null default 0,
@@ -329,20 +331,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id bigint  null primary key,
+id bigint  primary key,
 x bigint  null,
 y bigint  null,
 z bigint  null,
@@ -350,20 +352,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id bigint  not null primary key,
+id bigint  primary key,
 x bigint  not null default 0,
 y bigint  not null default 0,
 z bigint  not null default 0,
@@ -371,20 +373,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id bigint unsigned null primary key,
+id bigint unsigned primary key,
 x bigint unsigned null,
 y bigint unsigned null,
 z bigint unsigned null,
@@ -392,20 +394,20 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;
 create table tt (
-id bigint unsigned not null primary key,
+id bigint unsigned primary key,
 x bigint unsigned not null default 0,
 y bigint unsigned not null default 0,
 z bigint unsigned not null default 0,
@@ -413,15 +415,15 @@ a char(32), aa varchar(32)
 );
 insert noar into tt (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into tt (id) values (1) on duplicate key update y=0,z=42;
-insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into tt (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into tt (id) values (1) on duplicate key update y=y-1;
-insert noar into tt (id) values (1) on duplicate key update z=z-100;
+insert noar into tt (id) values (1) on duplicate key update z=z-50;
 create table ti like tt;
 alter table ti engine=innodb;
 insert noar into ti (id) values (1),(2),(3) on duplicate key update x=0;
 insert noar into ti (id) values (1) on duplicate key update y=0,z=42;
-insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+100;
+insert noar into ti (id) values (1) on duplicate key update y=y+1,z=z+50;
 insert noar into ti (id) values (1) on duplicate key update y=y-1;
-insert noar into ti (id) values (1) on duplicate key update z=z-100;
+insert noar into ti (id) values (1) on duplicate key update z=z-50;
 include/diff_tables.inc [test.tt, test.ti]
 drop table tt, ti;

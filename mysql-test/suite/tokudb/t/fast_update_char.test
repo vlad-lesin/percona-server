@@ -12,6 +12,9 @@ enable_warnings;
 
 set tokudb_disable_slow_update=1;
 
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_TRANS_TABLES',''));
+SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'STRICT_ALL_TABLES',''));
+
 create table tt (id int primary key, c char(32), b binary(32));
 create table ti like tt;
 alter table ti engine=innodb;
