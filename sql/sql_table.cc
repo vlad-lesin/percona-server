@@ -2468,9 +2468,13 @@ static bool drop_base_table(THD *thd, const Drop_tables_ctx &drop_ctx,
   if (atomic && hton->post_ddl) post_ddl_htons->insert(hton);
 
   if (error) {
-    if (error == HA_ERR_ROW_IS_REFERENCED)
+    if (error == HA_ERR_ROW_IS_REFERENCED) {
+      // Should be impossible for DROP DATABASE, as FK relationships have been
+      // checked beforehand, after MDL locks for tables in FK relationships
+      // have been acquired.
+      DBUG_ASSERT(thd->lex->sql_command != SQLCOM_DROP_DB);
       my_error(ER_ROW_IS_REFERENCED, MYF(0));
-    else if (error == HA_ERR_TOO_MANY_CONCURRENT_TRXS)
+    } else if (error == HA_ERR_TOO_MANY_CONCURRENT_TRXS)
       my_error(HA_ERR_TOO_MANY_CONCURRENT_TRXS, MYF(0));
     else {
       String tbl_name;
