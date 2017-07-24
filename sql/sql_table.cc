@@ -2704,7 +2704,13 @@ drop_base_table(THD *thd, const Drop_tables_ctx &drop_ctx,
   if (error)
   {
     if (error == HA_ERR_ROW_IS_REFERENCED)
+    {
+      // Should be impossible for DROP DATABASE, as FK relationships have been
+      // checked beforehand, after MDL locks for tables in FK relationships
+      // have been acquired.
+      DBUG_ASSERT(thd_sql_command(thd) != SQLCOM_DROP_DB);
       my_error(ER_ROW_IS_REFERENCED, MYF(0));
+    }
     else if (error == HA_ERR_TOO_MANY_CONCURRENT_TRXS)
       my_error(HA_ERR_TOO_MANY_CONCURRENT_TRXS, MYF(0));
     else
