@@ -44,6 +44,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #include <mysys_err.h>
 #include <strfunc.h>
 #include <sql_acl.h>
+#include <sql_audit.h>
 #include <sql_class.h>
 #include <sql_show.h>
 #include <sql_table.h>
@@ -3763,6 +3764,14 @@ innodb_log_checksums_func_update(bool	check)
 		: log_block_calc_checksum_none;
 }
 
+notification_callbacks_t *innodb_notification_callbacks = NULL;
+
+static
+void
+innobase_set_notification_callbacks(notification_callbacks_t *callbacks) {
+  innodb_notification_callbacks = callbacks;
+}
+
 /*********************************************************************//**
 Opens an InnoDB database.
 @return 0 on success, 1 on failure */
@@ -3785,6 +3794,8 @@ innobase_init(
 	innobase_hton->state = SHOW_OPTION_YES;
 	innobase_hton->db_type = DB_TYPE_INNODB;
 	innobase_hton->savepoint_offset = sizeof(trx_named_savept_t);
+  innobase_hton->set_notification_callbacks =
+    innobase_set_notification_callbacks;
 	innobase_hton->close_connection = innobase_close_connection;
 	innobase_hton->kill_connection = innobase_kill_connection;
 	innobase_hton->savepoint_set = innobase_savepoint;

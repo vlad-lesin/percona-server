@@ -729,6 +729,18 @@ enum handler_drop_zip_dict_result
                                         removal */
 };
 
+struct innodb_lock_wait_data {
+  uint64_t requested_trx_id;
+  uint32_t requested_thread_id;
+  uint64_t blocking_trx_id;
+  uint32_t blocking_thread_id;
+};
+
+struct notification_callbacks_t {
+  void (*notify_lock_wait_timeout)(const char *storage_engine_name,
+                                   const void *data);
+};
+
 class handler;
 /*
   handlerton is a singleton structure - one instance per storage engine -
@@ -773,6 +785,9 @@ struct handlerton
      see binlog_hton and binlog_savepoint_set/rollback for an example.
    */
    uint savepoint_offset;
+
+   void (*set_notification_callbacks)(notification_callbacks_t *callbacks);
+
    /*
      handlerton methods:
 

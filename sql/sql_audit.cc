@@ -501,6 +501,30 @@ int mysql_audit_notify(THD *thd, mysql_event_connection_subclass_t subclass,
                                     subclass_name, &event);
 }
 
+int mysql_audit_notify(THD *thd, mysql_event_locks_subclass_t subclass,
+                       const char* subclass_name,
+                       const char *storage_engine_name,
+                       const void *data)
+{
+  mysql_event_locks event;
+
+  DBUG_ASSERT(thd);
+
+  if (mysql_audit_acquire_plugins(thd, MYSQL_AUDIT_LOCKS_CLASS,
+                                  static_cast<unsigned long>(subclass)))
+    return 0;
+
+  MYSQL_LEX_CSTRING query;
+  event.event_subclass= subclass;
+  event.storage_engine_name= storage_engine_name;
+  thd_get_audit_query(thd, &query,
+                      (const charset_info_st**)&event.general_charset);
+  event.data= data;
+
+  return event_class_dispatch(thd, MYSQL_AUDIT_LOCKS_CLASS, &event);
+}
+
+
 int mysql_audit_notify(THD *thd, mysql_event_connection_subclass_t subclass,
                        const char* subclass_name)
 {

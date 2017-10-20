@@ -45,6 +45,7 @@ typedef enum
   MYSQL_AUDIT_COMMAND_CLASS          = 8,
   MYSQL_AUDIT_QUERY_CLASS            = 9,
   MYSQL_AUDIT_STORED_PROGRAM_CLASS   = 10,
+  MYSQL_AUDIT_LOCKS_CLASS            = 11,
   /* This item must be last in the list. */
   MYSQL_AUDIT_CLASS_MASK_SIZE
 } mysql_event_class_t;
@@ -112,6 +113,21 @@ typedef enum
                                  MYSQL_AUDIT_GENERAL_ERROR | \
                                  MYSQL_AUDIT_GENERAL_RESULT | \
                                  MYSQL_AUDIT_GENERAL_STATUS)
+
+typedef enum
+{
+  MYSQL_AUDIT_LOCKS_WAIT_TIMEOUT = 1 << 0
+} mysql_event_locks_subclass_t;
+
+#define MYSQL_AUDIT_LOCKS_ALL (MYSQL_AUDIT_LOCKS_WAIT_TIMEOUT)
+
+struct mysql_event_locks
+{
+  mysql_event_locks_subclass_t event_subclass;
+  const char *storage_engine_name;
+  struct charset_info_st *general_charset;
+  const void *data;
+};
 /**
   @struct mysql_event_general
 

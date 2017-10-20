@@ -43,7 +43,7 @@
 #include "sql_select.h"               // actual_key_parts
 #include "rpl_write_set_handler.h"    // add_pke
 #include "auth_common.h"              // check_readonly() and SUPER_ACL
-
+#include "sql_audit.h"
 
 #include "pfs_file_provider.h"
 #include "mysql/psi/mysql_file.h"
@@ -847,6 +847,19 @@ int ha_finalize_handlerton(st_plugin_int *plugin)
   DBUG_RETURN(0);
 }
 
+#ifndef EMBEDDED_LIBRARY
+void notify_audit_lock_wait_timeout(const char *storage_engine_name,
+                                    const void *data) {
+      mysql_audit_notify(current_thd,
+                         AUDIT_EVENT(MYSQL_AUDIT_LOCKS_WAIT_TIMEOUT),
+                         storage_engine_name,
+                         data);
+}
+
+notification_callbacks_t audit_notify = {
+  .notify_lock_wait_timeout = notify_audit_lock_wait_timeout
+};
+#endif
 
 int ha_initialize_handlerton(st_plugin_int *plugin)
 {
@@ -875,6 +888,11 @@ int ha_initialize_handlerton(st_plugin_int *plugin)
     goto err;  
   }
 
+#ifndef EMBEDDED_LIBRARY
+  if (hton->set_notification_callbacks) {
+    hton->set_notification_callbacks(&audit_notify);
+  }
+#endif
   /*
     the switch below and hton->state should be removed when
     command-line options for plugins will be implemented

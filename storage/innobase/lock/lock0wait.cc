@@ -27,6 +27,7 @@ Created 25/5/2010 Sunny Bains
 
 #include "ha_prototypes.h"
 #include <mysql/service_thd_wait.h>
+#include "handler.h"
 
 #include "srv0mon.h"
 #include "que0que.h"
@@ -34,6 +35,7 @@ Created 25/5/2010 Sunny Bains
 #include "row0mysql.h"
 #include "srv0start.h"
 #include "lock0priv.h"
+#include "lock0iter.h"
 
 /*********************************************************************//**
 Print the contents of the lock_sys_t::waiting_threads array. */
@@ -177,6 +179,27 @@ lock_wait_table_reserve_slot(
 	return(NULL);
 }
 
+extern notification_callbacks_t *innodb_notification_callbacks;
+
+void
+print_lock_wait_timeout(trx_t *trx,
+                        uint64_t blocking_trx_id,
+                        uint32_t blocking_thread_id)
+{
+
+  if (innodb_notification_callbacks &&
+      innodb_notification_callbacks->notify_lock_wait_timeout) {
+
+    innodb_lock_wait_data lwd;
+    lwd.requested_trx_id = trx_get_id_for_print(trx);
+    lwd.requested_thread_id = thd_get_thread_id(trx->mysql_thd);
+    lwd.blocking_trx_id = blocking_trx_id;
+    lwd.blocking_thread_id = blocking_thread_id;
+    innodb_notification_callbacks->notify_lock_wait_timeout(
+      "InnoDB", &lwd);
+  }
+}
+
 /***************************************************************//**
 Puts a user OS thread to wait for a lock to be released. If an error
 occurs during the wait trx->error_state associated with thr is
@@ -198,6 +221,8 @@ lock_wait_suspend_thread(
 	ulint		sec;
 	ulint		ms;
 	ulong		lock_wait_timeout;
+  uint64_t blocking_trx_id = 0;
+  uint32_t blocking_thread_id = 0;
 
 	trx = thr_get_trx(thr);
 
@@ -259,6 +284,19 @@ lock_wait_suspend_thread(
 
 	if (const lock_t* wait_lock = trx->lock.wait_lock) {
 		lock_type = lock_get_type_low(wait_lock);
+    lock_queue_iterator_t	iter;
+    const lock_t*		curr_lock;
+		lock_queue_iterator_reset(&iter, wait_lock, ULINT_UNDEFINED);
+		for (curr_lock = lock_queue_iterator_get_prev(&iter);
+		     curr_lock != NULL;
+		     curr_lock = lock_queue_iterator_get_prev(&iter)) {
+			if (lock_has_to_wait(trx->lock.wait_lock, curr_lock)) {
+        blocking_trx_id = lock_get_trx_id(curr_lock);
+        blocking_thread_id = thd_get_thread_id(curr_lock->trx->mysql_thd);
+        /* Only one blocking transaction info is currently implemented */
+        break;
+      }
+    }
 	}
 
 	lock_mutex_exit();
@@ -372,6 +410,7 @@ lock_wait_suspend_thread(
 	    && !trx_is_high_priority(trx)) {
 
 		trx->error_state = DB_LOCK_WAIT_TIMEOUT;
+    print_lock_wait_timeout(trx, blocking_trx_id, blocking_thread_id);
 
 		MONITOR_INC(MONITOR_TIMEOUT);
 	}

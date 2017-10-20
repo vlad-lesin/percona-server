@@ -35,11 +35,12 @@
 #include "buffer.h"
 #include "audit_handler.h"
 #include "filter.h"
+#include "lock_waits_timeout.h"
 
 #define PLUGIN_VERSION 0x0002
 
 
-enum audit_log_policy_t { ALL, NONE, LOGINS, QUERIES };
+enum audit_log_policy_t { ALL, NONE, LOGINS, QUERIES, LOCKS };
 enum audit_log_strategy_t
   { ASYNCHRONOUS, PERFORMANCE, SEMISYNCHRONOUS, SYNCHRONOUS };
 enum audit_log_format_t { OLD, NEW, JSON, CSV };
@@ -119,7 +120,7 @@ static const char *audit_log_syslog_priority_names[]=
   { "LOG_INFO",   "LOG_ALERT", "LOG_CRIT", "LOG_ERR", "LOG_WARNING",
     "LOG_NOTICE", "LOG_EMERG", "LOG_DEBUG", 0 };
 
-static MYSQL_PLUGIN plugin_ptr;
+MYSQL_PLUGIN plugin_ptr;
 
 static
 void init_record_id(off_t size)
@@ -134,14 +135,9 @@ ulonglong next_record_id()
   return __sync_add_and_fetch(&record_id, 1);
 }
 
-
-#define MAX_RECORD_ID_SIZE  50
-#define MAX_TIMESTAMP_SIZE  25
-
 void plugin_thdvar_safe_update(MYSQL_THD thd, struct st_mysql_sys_var *var,
                                char **dest, const char *value);
 
-static
 char *make_timestamp(char *buf, size_t buf_len, time_t t)
 {
   struct tm tm;
@@ -152,7 +148,6 @@ char *make_timestamp(char *buf, size_t buf_len, time_t t)
   return buf;
 }
 
-static
 char *make_record_id(char *buf, size_t buf_len)
 {
   struct tm tm;
@@ -307,7 +302,6 @@ size_t calculate_escape_string_buf_len(const char *in, size_t len)
   @return
     pointer to the beginning of the output buffer
 */
-static
 char *escape_string(const char *in, size_t inlen,
                     char *out, size_t outlen,
                     char **endptr, size_t *full_outlen)
@@ -353,7 +347,6 @@ void my_plugin_perror(void)
   my_plugin_log_message(&plugin_ptr, MY_ERROR_LEVEL, "Error: %s", errbuf);
 }
 
-static
 void audit_log_write(const char *buf, size_t len)
 {
   static int write_error= 0;
@@ -781,58 +774,6 @@ int reopen_log_file()
   return(0);
 }
 
-typedef struct
-{
-  /* number of included databases */
-  int databases_included;
-  /* number of excluded databases */
-  int databases_excluded;
-  /* number of accessed databases */
-  int databases_accessed;
-  /* query */
-  const char *query;
-} query_stack_frame;
-
-typedef struct
-{
-  size_t size;
-  size_t top;
-  query_stack_frame *frames;
-} query_stack;
-
-/*
- Struct to store various THD specific data
- */
-typedef struct
-{
-  /* size of allocated large buffer for record formatting */
-  size_t record_buffer_size;
-  /* large buffer for record formatting */
-  char *record_buffer;
-  /* skip session logging */
-  my_bool skip_session;
-  /* skip logging for the next query */
-  my_bool skip_query;
-  /* default database */
-  char db[NAME_LEN + 1];
-  /* default database candidate */
-  char init_db_query[NAME_LEN + 1];
-  /* call stack */
-  query_stack stack;
-} audit_log_thd_local;
-
-/*
- Return pointer to THD specific data.
- */
-static
-audit_log_thd_local *get_thd_local(MYSQL_THD thd);
-
-/*
- Allocate and return buffer of given size.
- */
-static
-char *get_record_buffer(MYSQL_THD thd, size_t size);
-
 /*
  Allocate and return given number of stack frames.
  */
@@ -974,10 +915,13 @@ int is_event_class_allowed_by_policy(mysql_event_class_t class,
   static unsigned int class_mask[]=
   {
     /* ALL */
-    (1 << MYSQL_AUDIT_GENERAL_CLASS) | (1 << MYSQL_AUDIT_CONNECTION_CLASS),
+    (1 << MYSQL_AUDIT_GENERAL_CLASS) |
+    (1 << MYSQL_AUDIT_CONNECTION_CLASS) |
+    (1 << MYSQL_AUDIT_LOCKS_CLASS),
     0,                                                        /* NONE */
     (1 << MYSQL_AUDIT_CONNECTION_CLASS),                      /* LOGINS */
     (1 << MYSQL_AUDIT_GENERAL_CLASS),                         /* QUERIES */
+    (1 << MYSQL_AUDIT_LOCKS_CLASS),                           /* LOCKS */
   };
 
   return (class_mask[policy] & (1 << class)) != 0;
@@ -1205,9 +1149,8 @@ my_bool audit_log_update_thd_local(MYSQL_THD thd,
   return TRUE;
 }
 
-
 static
-int audit_log_notify(MYSQL_THD thd MY_ATTRIBUTE((unused)),
+int audit_log_notify(MYSQL_THD thd,
                      mysql_event_class_t event_class,
                      const void *event)
 {
@@ -1225,6 +1168,9 @@ int audit_log_notify(MYSQL_THD thd MY_ATTRIBUTE((unused)),
 
   if (local->skip_session)
     return 0;
+
+  if (event_class == MYSQL_AUDIT_LOCKS_CLASS)
+    return process_locks(thd, event_class, event);
 
   if (event_class == MYSQL_AUDIT_GENERAL_CLASS)
   {
@@ -1310,7 +1256,7 @@ static MYSQL_SYSVAR_STR(file, audit_log_file,
   "The name of the log file.", NULL, NULL, default_audit_log_file);
 
 static const char *audit_log_policy_names[]=
-                    { "ALL", "NONE", "LOGINS", "QUERIES", 0 };
+                    { "ALL", "NONE", "LOGINS", "QUERIES", "LOCKS", 0 };
 
 static TYPELIB audit_log_policy_typelib=
 {
@@ -1844,7 +1790,6 @@ void MY_ATTRIBUTE((constructor)) audit_log_so_init()
 /*
  Return pointer to THD specific data.
  */
-static
 audit_log_thd_local *get_thd_local(MYSQL_THD thd)
 {
   audit_log_thd_local *local= (audit_log_thd_local *) THDVAR(thd, local_ptr);
@@ -1867,7 +1812,6 @@ audit_log_thd_local *get_thd_local(MYSQL_THD thd)
 /*
  Allocate and return buffer of given size.
  */
-static
 char *get_record_buffer(MYSQL_THD thd, size_t size)
 {
   audit_log_thd_local *local= get_thd_local(thd);
@@ -1940,7 +1884,8 @@ static struct st_mysql_audit audit_log_descriptor=
     MYSQL_AUDIT_CONNECTION_ALL,
     0, 0,
     MYSQL_AUDIT_TABLE_ACCESS_ALL,
-    0, 0, 0, 0, 0 }                             /* class mask           */
+    0, 0, 0, 0, 0, 0,
+    MYSQL_AUDIT_LOCKS_ALL}                             /* class mask           */
 };
 
 /*

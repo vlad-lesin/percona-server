@@ -77,6 +77,12 @@ void mysql_audit_release(THD *thd);
 int mysql_audit_notify(THD *thd, mysql_event_general_subclass_t subclass,
                        const char* subclass_name,
                        int error_code, const char *msg, size_t msg_len);
+
+int mysql_audit_notify(THD *thd, mysql_event_locks_subclass_t subclass,
+                       const char* subclass_name,
+                       const char *storage_engine_name,
+                       const void *data);
+
 /**
   Call audit plugins of GENERAL LOG audit class.
 

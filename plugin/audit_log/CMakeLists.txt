@@ -12,9 +12,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 MYSQL_ADD_PLUGIN(audit_log audit_log.c file_logger.c buffer.c audit_file.c
- audit_syslog.c filter.c
+ audit_syslog.c filter.c lock_waits_timeout.cc
  MODULE_ONLY MODULE_OUTPUT_NAME "audit_log")
 
 IF(UNIX)

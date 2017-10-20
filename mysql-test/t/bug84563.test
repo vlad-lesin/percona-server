@@ -1,0 +1,61 @@
+--source include/have_innodb.inc
+
+SHOW PLUGINS;
+show global variables like 'audit%';
+
+SET GLOBAL innodb_print_all_deadlocks=ON;
+
+CREATE TABLE t (i INT) ENGINE = InnoDB;
+INSERT INTO t (i) VALUES(1);
+START TRANSACTION;
+SELECT * FROM t WHERE i = 1 LOCK IN SHARE MODE;
+
+--connect(con0, localhost, root,,)
+START TRANSACTION;
+--send DELETE FROM t WHERE i = 1;
+
+--connect(con1, localhost, root,,)
+select * from information_schema.innodb_lock_waits;
+#SELECT * FROM sys.innodb_lock_waits;
+#SELECT THREAD_ID,SQL_TEXT FROM performance_schema.events_statements_history;
+#SELECT THREAD_ID,PROCESSLIST_ID FROM performance_schema.threads;
+
+#SELECT esh.THREAD_ID, t.PROCESSLIST_ID, esh.SQL_TEXT FROM
+#  performance_schema.events_statements_history esh
+#  INNER JOIN
+#  performance_schema.threads t
+#  ON t.THREAD_ID = esh.THREAD_ID;
+#  WHERE PROCESSLIST_ID = 5
+#UNION
+#  SELECT esh.THREAD_ID, esh.SQL_TEXT FROM
+#  performance_schema.events_statements_current esh
+#  INNER JOIN
+#  performance_schema.threads t
+#  ON t.THREAD_ID = esh.THREAD_ID;
+#  WHERE PROCESSLIST_ID = 5;
+
+#SELECT s.THREAD_ID, s.SQL_TEXT FROM performance_schema.events_statements_history s INNER JOIN performance_schema.threads t ON t.THREAD_ID = s.THREAD_ID WHERE PROCESSLIST_ID = 5;
+
+#SELECT t.THREAD_ID, s.SQL_TEXT
+#                FROM performance_schema.events_transactions_current t
+#                     INNER JOIN performance_schema.events_statements_history s
+#                             ON s.THREAD_ID = t.THREAD_ID
+#                            AND s.NESTING_EVENT_ID = t.EVENT_ID
+#               WHERE t.THREAD_ID = 5
+#               ORDER BY s.EVENT_ID;
+
+show full processlist;
+
+--connection con0
+--reap
+
+--connection default
+DELETE FROM t WHERE i = 1;
+COMMIT
+
+--connection con0
+COMMIT
+
+DROP TABLE t;
+SET GLOBAL innodb_print_all_deadlocks=default;
+
