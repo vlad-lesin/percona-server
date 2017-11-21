@@ -1,0 +1,45 @@
+
+CREATE TABLE t (a BIGINT, b VARCHAR(256)) ENGINE=InnoDB;
+--let INSERT_FILE_NAME = $MYSQLTEST_VARDIR/tmp/big-insert.sql
+--let MAX_INSERT_SIZE=`SELECT @@max_allowed_packet`
+
+--echo # GENERATE BIG "INSERT" STATEMENT
+perl;
+  my $fname= $ENV{INSERT_FILE_NAME};
+  open(my $fh, '>', $fname) or die "Failed to open $fname: $!\n";
+  my $max_size = $ENV{MAX_INSERT_SIZE};
+  my $header = "INSERT INTO t VALUES\n";
+  my $values = "(1,'This is a dummy value'),\n";
+  my $footer = "(1,'This is a dummy value');";
+  my $cur_size = length($header) + length($footer);
+  my $max_size_without_footer = $max_size - length($footer);
+  print $fh $header;
+  while ($cur_size < $max_size_without_footer) {
+    print $fh $values;
+    $cur_size += length($values);
+  }
+  print $fh $footer;
+  close $fh;
+EOF
+
+SELECT * FROM sys.memory_global_total;
+--echo # EXECUTE BIG "INSERT" STATEMENT
+#--exec $MYSQL test < $INSERT_FILE_NAME
+--disable_query_log
+--source $INSERT_FILE_NAME
+--enable_query_log
+SELECT * FROM sys.memory_global_total;
+
+--echo # SLEEP
+SELECT SLEEP(60);
+SELECT * FROM sys.memory_global_total;
+--echo # EXECUTE BIG "INSERT" STATEMENT
+#--exec $MYSQL test < $INSERT_FILE_NAME
+--disable_query_log
+--source $INSERT_FILE_NAME
+--enable_query_log
+SELECT * FROM sys.memory_global_total;
+
+--echo # CLEANUP
+--remove_file $INSERT_FILE_NAME
+DROP TABLE t;

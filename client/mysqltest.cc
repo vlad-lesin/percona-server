@@ -6964,7 +6964,7 @@ bool is_delimiter(const char* p)
   terminated by new line '\n' regardless how many "delimiter" it contain.
 */
 
-#define MAX_QUERY (256*1024*2) /* 256K -- a test in sp-big is >128K */
+#define MAX_QUERY (500*1024*1024)//(256*1024*2) /* 256K -- a test in sp-big is >128K */
 static char read_command_buf[MAX_QUERY];
 
 int read_command(struct st_command** command_ptr)
