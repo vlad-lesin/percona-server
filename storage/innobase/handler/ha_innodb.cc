@@ -771,6 +771,10 @@ static MYSQL_THDVAR_STR(tmpdir,
   "Directory for temporary non-tablespace files.",
   innodb_tmpdir_validate, NULL, NULL);
 
+static MYSQL_THDVAR_BOOL(stats_force_collect, PLUGIN_VAR_OPCMDARG,
+  "Force InnoDB to return persistent stats for each query.",
+  NULL, NULL, FALSE);
+
 static SHOW_VAR innodb_status_variables[]= {
   {"buffer_pool_dump_status",
   (char*) &export_vars.innodb_buffer_pool_dump_status,	  SHOW_CHAR},
@@ -12291,7 +12295,7 @@ ha_innobase::info_low(
 		}
 	}
 
-	if (flag & HA_STATUS_CONST) {
+	if ((flag & HA_STATUS_CONST) || THDVAR(ha_thd(), stats_force_collect)) {
 		ulong	i;
 		char	path[FN_REFLEN];
 		/* Verify the number of index in InnoDB and MySQL
@@ -18879,6 +18883,7 @@ static struct st_mysql_sys_var* innobase_system_variables[]= {
   MYSQL_SYSVAR(fake_changes),
   MYSQL_SYSVAR(locking_fake_changes),
   MYSQL_SYSVAR(tmpdir),
+  MYSQL_SYSVAR(stats_force_collect),
   MYSQL_SYSVAR(compressed_columns_zip_level),
   MYSQL_SYSVAR(compressed_columns_threshold),
   NULL
