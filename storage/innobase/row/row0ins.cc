@@ -1582,6 +1582,11 @@ row_ins_check_foreign_constraint(
 
 	skip_gap_lock = (trx->isolation_level <= TRX_ISO_READ_COMMITTED);
 
+  ib::info() << "------>" << current_thd
+             << " row_ins_check_foreign_constraint(), skip_gap_lock: "
+             << skip_gap_lock
+             << " isolation level: " << trx->isolation_level;
+
 	DBUG_ENTER("row_ins_check_foreign_constraint");
 
 	rec_offs_init(offsets_);
@@ -1699,6 +1704,13 @@ row_ins_check_foreign_constraint(
 		const rec_t*		rec = btr_pcur_get_rec(&pcur);
 		const buf_block_t*	block = btr_pcur_get_block(&pcur);
 
+    ib::info() << "------>"
+               << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+               << " row_ins_check_foreign_constraint(), iterate page id: "
+               << block->page.id.page_no()
+               << " skip_gap_lock: "
+               << skip_gap_lock;
+
 		SRV_CORRUPT_TABLE_CHECK(block,
 		{
 			err = DB_CORRUPTION;
@@ -1723,6 +1735,12 @@ row_ins_check_foreign_constraint(
 			err = row_ins_set_shared_rec_lock(LOCK_ORDINARY, block,
 							  rec, check_index,
 							  offsets, thr);
+    ib::info() << "------>"
+               << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+               << " row_ins_check_foreign_constraint(),"
+                  " row_ins_set_shared_rec_lock call result: "
+               << err;
+
 			switch (err) {
 			case DB_SUCCESS_LOCKED_REC:
 			case DB_SUCCESS:
@@ -2545,7 +2563,6 @@ row_ins_clust_index_entry_low(
 			err = row_ins_duplicate_error_in_clust_online(
 				n_uniq, entry, cursor,
 				&offsets, &offsets_heap);
-
 			switch (err) {
 			case DB_SUCCESS:
 				break;
@@ -2614,6 +2631,7 @@ err_exit:
 				flags, cursor, &offsets, &offsets_heap,
 				entry, &insert_rec, &big_rec,
 				n_ext, thr, &mtr);
+
 		} else {
 			if (buf_LRU_buf_pool_running_out()) {
 
@@ -2635,6 +2653,7 @@ err_exit:
 					&offsets, &offsets_heap,
 					entry, &insert_rec, &big_rec,
 					n_ext, thr, &mtr);
+
 			}
 		}
 
@@ -2654,6 +2673,7 @@ err_exit:
 				entry, big_rec, offsets, &offsets_heap, index,
 				thr_get_trx(thr)->mysql_thd,
 				__FILE__, __LINE__);
+
 			dtuple_convert_back_big_rec(index, entry, big_rec);
 		} else {
 			if (err == DB_SUCCESS
@@ -3303,6 +3323,8 @@ row_ins_clust_index_entry(
 	if (!index->table->foreign_set.empty()) {
 		err = row_ins_check_foreign_constraints(
 			index->table, index, entry, thr);
+//      ib::info() << "=======" << current_thd << " row_ins_clust_index_entry(): "
+//               << "row_ins_check_foreign_constraints() returned " << err;
 		if (err != DB_SUCCESS) {
 
 			DBUG_RETURN(err);
@@ -3333,10 +3355,15 @@ row_ins_clust_index_entry(
 
 		err = row_ins_sorted_clust_index_entry(
 			BTR_MODIFY_LEAF, index, entry, n_ext, thr);
+//    ib::info() << "=======" << current_thd << " row_ins_clust_index_entry(): "
+//               << "row_ins_sorted_clust_index_entry() returned " << err;
+
 	} else {
 		err = row_ins_clust_index_entry_low(
 			flags, BTR_MODIFY_LEAF, index, n_uniq, entry,
 			n_ext, thr, dup_chk_only);
+    ib::info() << "=======" << current_thd << " row_ins_clust_index_entry(): "
+               << "row_ins_clust_index_entry_low() returned " << err;
 	}
 
 
@@ -3362,10 +3389,14 @@ row_ins_clust_index_entry(
 	    && dict_index_is_auto_gen_clust(index)) {
 		err = row_ins_sorted_clust_index_entry(
 			BTR_MODIFY_TREE, index, entry, n_ext, thr);
+//    ib::info() << "=======" << current_thd << " row_ins_clust_index_entry(): "
+//               << "row_ins_sorted_clust_index_entry() 2 returned " << err;
 	} else {
 		err = row_ins_clust_index_entry_low(
 			flags, BTR_MODIFY_TREE, index, n_uniq, entry,
 			n_ext, thr, dup_chk_only);
+//    ib::info() << "=======" << current_thd << " row_ins_clust_index_entry(): "
+//               << "row_ins_clust_index_entry_low() 2 returned " << err;
 	}
 
 	DBUG_RETURN(err);
@@ -3398,8 +3429,9 @@ row_ins_sec_index_entry(
 	if (!index->table->foreign_set.empty()) {
 		err = row_ins_check_foreign_constraints(index->table, index,
 							entry, thr);
+//    ib::info() << "+++++++++" << current_thd << " row_ins_sec_index_entry(): "
+//               << "row_ins_check_foreign_constraints() returned " << err;
 		if (err != DB_SUCCESS) {
-
 			return(err);
 		}
 	}
@@ -3426,6 +3458,10 @@ row_ins_sec_index_entry(
 	err = row_ins_sec_index_entry_low(
 		flags, BTR_MODIFY_LEAF, index, offsets_heap, heap, entry,
 		0, thr, dup_chk_only);
+
+//  ib::info() << "+++++++++" << current_thd << " row_ins_sec_index_entry(): "
+//             << "row_ins_sec_index_entry_low() 1 returned " << err;
+
 	if (err == DB_FAIL) {
 		mem_heap_empty(heap);
 
@@ -3444,6 +3480,8 @@ row_ins_sec_index_entry(
 			flags, BTR_MODIFY_TREE, index,
 			offsets_heap, heap, entry, 0, thr,
 			dup_chk_only);
+//      ib::info() << "+++++++++" << current_thd << " row_ins_sec_index_entry(): "
+//                  << "row_ins_sec_index_entry_low() 2 returned " << err;
 	}
 
 	mem_heap_free(heap);
@@ -3616,6 +3654,8 @@ row_ins_index_entry_step(
 
 	err = row_ins_index_entry_set_vals(node->index, node->entry, node->row);
 
+//  ib::info() << "$$$$$" << current_thd << " row_ins_index_entry_step(): "
+//           << "row_ins_index_entry_set_vals() returned " << err;
 	if (err != DB_SUCCESS) {
 		DBUG_RETURN(err);
 	}
@@ -3623,6 +3663,10 @@ row_ins_index_entry_step(
 	ut_ad(dtuple_check_typed(node->entry));
 
 	err = row_ins_index_entry(node->index, node->entry, thr);
+
+  ib::info() << "$$$$$" << (current_thd ? thd_get_thread_id(current_thd) : 0)
+            << " row_ins_index_entry_step(): "
+           << "row_ins_index_entry() returned " << err;
 
 	DEBUG_SYNC_C_IF_THD(thr_get_trx(thr)->mysql_thd,
 			    "after_row_ins_index_entry_step");
@@ -3765,6 +3809,10 @@ row_ins(
 	while (node->index != NULL) {
 		if (node->index->type != DICT_FTS) {
 			err = row_ins_index_entry_step(node, thr);
+      ib::info() << "------>"
+               << (current_thd ? thd_get_thread_id(current_thd) : 0)
+               << " row_ins(): row_ins_index_entry_step() returned "
+               << err;
 
 			switch (err) {
 			case DB_SUCCESS:
@@ -3913,6 +3961,9 @@ row_ins_step(
 		}
 
 		err = lock_table(0, node->table, LOCK_IX, thr);
+    ib::info() << "----->"
+               << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+               << " row_ins_step(): lock_table returned " << err;
 
 		DBUG_EXECUTE_IF("ib_row_ins_ix_lock_wait",
 				err = DB_LOCK_WAIT;);

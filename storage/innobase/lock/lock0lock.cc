@@ -48,8 +48,40 @@ Created 5/7/1996 Heikki Tuuri
 #include "row0sel.h"
 #include "row0mysql.h"
 #include "pars0pars.h"
+#include "page0page.h"
+
+#include <debug_sync.h>
 
 #include <set>
+
+extern "C" LEX_CSTRING thd_query_unsafe(MYSQL_THD thd);
+
+static void inline print_info_if_supremum(
+  const char *msg,
+  const buf_block_t*	block,
+  dict_index_t*		index,
+	ulint			heap_no,
+  ulint			mode) {
+
+  const char *query = current_thd ? thd_query_unsafe(current_thd).str : "";
+
+  if (!query)
+    query = "";
+
+  if (heap_no == PAGE_HEAP_NO_SUPREMUM) {
+    if (block->page.id.page_no() == 5) {
+      page_print(const_cast<buf_block_t *>(block), index, 100, 100);
+      ib::info() << "!!!!!!!!!!!!" << current_thd << " TADAAAAM";
+    }
+    ib::info() << ">>>>>>>>" << current_thd
+               << " " << msg
+               << " supremum on page "
+               << block->page.id.page_no()
+               << ", mode " << mode
+               << ", query: " << query;
+  }
+
+}
 
 /* Flag to enable/disable deadlock detector. */
 my_bool	innobase_deadlock_detect = TRUE;
@@ -2058,17 +2090,35 @@ lock_rec_lock(
 	      || mode - (LOCK_MODE_MASK & mode) == 0);
 	ut_ad(dict_index_is_clust(index) || !dict_index_is_online_ddl(index));
 
+  
 	/* We try a simplified and faster subroutine for the most
 	common cases */
 	switch (lock_rec_lock_fast(impl, mode, block, heap_no, index, thr)) {
 	case LOCK_REC_SUCCESS:
+   ib::info() << "----------->"
+      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+      << " lock_rec_lock(): lock_rec_lock_fast() returned "
+      << LOCK_REC_SUCCESS;
+    print_info_if_supremum("lock", block, index, heap_no, mode);
 		return(DB_SUCCESS);
 	case LOCK_REC_SUCCESS_CREATED:
+    ib::info() << "----------->"
+      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+      << " lock_rec_lock(): lock_rec_lock_fast() returned "
+      << LOCK_REC_SUCCESS_CREATED;
+    print_info_if_supremum("lock", block, index, heap_no, mode);
 		return(DB_SUCCESS_LOCKED_REC);
 	case LOCK_REC_FAIL:
+    ib::info() << "----------->"
+      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+      << " lock_rec_lock(): lock_rec_lock_fast() returned "
+      << LOCK_REC_FAIL;
+    print_info_if_supremum("lock", block, index, heap_no, mode);
 		return(lock_rec_lock_slow(impl, mode, block,
 					  heap_no, index, thr));
 	}
+
+  print_info_if_supremum("lock error", block, index, heap_no, mode);
 
 	ut_error;
 	return(DB_ERROR);
@@ -2454,11 +2504,15 @@ lock_rec_dequeue_from_page(
 	ut_ad(lock_mutex_own());
 	ut_ad(lock_get_type_low(in_lock) == LOCK_REC);
 	/* We may or may not be holding in_lock->trx->mutex here. */
-
 	trx_lock = &in_lock->trx->lock;
 
 	space = in_lock->un_member.rec_lock.space;
 	page_no = in_lock->un_member.rec_lock.page_no;
+
+  ib::info() << "///////////////////" << current_thd
+             << " lock_rec_dequeue_from_page"
+             << " space: " << space
+             << " page_no: " << page_no;
 
 	ut_ad(in_lock->index->table->n_rec_locks > 0);
 	in_lock->index->table->n_rec_locks--;
@@ -4366,7 +4420,9 @@ lock_release(
 		ut_d(lock_check_dict_lock(lock));
 
 		if (lock_get_type_low(lock) == LOCK_REC) {
-
+      ib::info() << "XXXXXX"
+                 << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+                 <<" lock_release()";
 			lock_rec_dequeue_from_page(lock);
 		} else {
 			dict_table_t*	table;
@@ -5767,6 +5823,7 @@ lock_validate()
 	return(true);
 }
 #endif /* UNIV_DEBUG */
+
 /*============ RECORD LOCK CHECKS FOR ROW OPERATIONS ====================*/
 
 /*********************************************************************//**
@@ -5799,7 +5856,9 @@ lock_rec_insert_check_and_lock(
 	ut_ad((flags & BTR_NO_LOCKING_FLAG) || thr);
 
 	if (flags & BTR_NO_LOCKING_FLAG) {
-
+    ib::info() << "----------->"
+      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+      << " lock_rec_insert_check_and_lock(): 1";
 		return(DB_SUCCESS);
 	}
 
@@ -5837,13 +5896,30 @@ lock_rec_insert_check_and_lock(
 		}
 
 		*inherit = FALSE;
-
+    ib::info() << "----------->"
+      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+      << " lock_rec_insert_check_and_lock(): 2"
+      << " page no: " << block->page.id.page_no()
+      << " heap_no: " << heap_no;
+#ifndef UNIV_HOTBACKUP
+# ifdef UNIV_BTR_PRINT
+    if (block->page.id.page_no() == 5) {
+      page_print(block, index, 100, 100);
+    }
+# endif
+#endif
 		return(DB_SUCCESS);
 	}
 
 	/* Spatial index does not use GAP lock protection. It uses
 	"predicate lock" to protect the "range" */
 	if (dict_index_is_spatial(index)) {
+    ib::info() << "----------->"
+      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+      << " lock_rec_insert_check_and_lock(): 3"
+      << " page no: " << block->page.id.page_no()
+      << " heap_no: " << heap_no;
+
 		return(DB_SUCCESS);
 	}
 
@@ -5864,6 +5940,14 @@ lock_rec_insert_check_and_lock(
 	const lock_t*	wait_for = lock_rec_other_has_conflicting(
 				type_mode, block, heap_no, trx);
 
+  ib::info() << "----wait_for------->"
+      << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+      << " lock_rec_insert_check_and_lock(): lock_rec_other_has_conflicting() "
+      << " page no: " << block->page.id.page_no()
+      << " heap_no: " << heap_no
+      <<" returned "
+      << wait_for;
+
 	if (wait_for != NULL) {
 
 		RecLock	rec_lock(thr, index, block, heap_no, type_mode);
@@ -5871,6 +5955,20 @@ lock_rec_insert_check_and_lock(
 		trx_mutex_enter(trx);
 
 		err = rec_lock.add_to_waitq(wait_for);
+    ib::info() << "----------->"
+      << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+      << " lock_rec_insert_check_and_lock(): rec_lock.add_to_waitq()"
+      << " page no: " << block->page.id.page_no()
+      << " heap_no: " << heap_no
+      << " returned "
+      << err;
+//#ifndef UNIV_HOTBACKUP
+//# ifdef UNIV_BTR_PRINT
+      if (block->page.id.page_no() == 5) {
+        page_print(block, index, 100, 100);
+      }
+//#endif
+//#endif
 
 		trx_mutex_exit(trx);
 
@@ -6185,7 +6283,6 @@ lock_sec_rec_read_check_and_lock(
 {
 	dberr_t	err;
 	ulint	heap_no;
-
 	ut_ad(!dict_index_is_clust(index));
 	ut_ad(!dict_index_is_online_ddl(index));
 	ut_ad(block->frame == page_align(rec));
@@ -6803,6 +6900,9 @@ lock_trx_release_locks(
 	trx_mutex_exit(trx);
 
 	if (release_lock) {
+  ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+
+                 <<" lock_trx_release_locks()";
 
 		lock_release(trx);
 
