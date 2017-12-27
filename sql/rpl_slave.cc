@@ -5288,6 +5288,14 @@ static int exec_relay_log_event(THD* thd, Relay_log_info* rli)
         DBUG_RETURN(1);
     }
 
+    if (ptr_ev && *ptr_ev) {
+      sql_print_information(
+        "======>>>> thread id: %u : query: %s, %u",
+        thd->thread_id(),
+        thd->query().str ? thd->query().str : "",
+        (*ptr_ev)->get_type_code());
+
+    }
     /* ptr_ev can change to NULL indicating MTS coorinator passed to a Worker */
     exec_res= apply_event_and_update_pos(ptr_ev, thd, rli);
     /*

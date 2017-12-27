@@ -40,8 +40,9 @@ static my_bool xacommit_handlerton(THD *unused1, plugin_ref plugin,
                                    void *arg)
 {
   handlerton *hton= plugin_data<handlerton*>(plugin);
-  if (hton->state == SHOW_OPTION_YES && hton->recover)
-    hton->commit_by_xid(hton, (XID *)arg);
+  if (hton->state == SHOW_OPTION_YES && hton->recover) {
+       hton->commit_by_xid(hton, (XID *)arg);
+  }
 
   return FALSE;
 }
@@ -460,6 +461,11 @@ bool Sql_cmd_xa_commit::trans_xa_commit(THD *thd)
 
 bool Sql_cmd_xa_commit::execute(THD *thd)
 {
+  sql_print_information(
+    "======>>>> %u Sql_cmd_xa_commit::execute(): %s",
+    thd->thread_id(),
+    thd->query().str);
+
   bool st= trans_xa_commit(thd);
 
   if (!st)

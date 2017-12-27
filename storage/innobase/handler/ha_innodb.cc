@@ -4698,6 +4698,8 @@ innobase_commit_low(
 	trx_t*	trx)	/*!< in: transaction handle */
 {
 	if (trx_is_started(trx)) {
+    ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+                 <<" innobase_commit_low()";
 
 		trx_commit_for_mysql(trx);
 	}
@@ -5038,6 +5040,7 @@ innobase_commit(
 	trx->fts_next_doc_id = 0;
 
 	innobase_srv_conc_force_exit_innodb(trx);
+
 
 	DBUG_RETURN(0);
 }
@@ -9070,6 +9073,16 @@ ha_innobase::delete_row(
 	TrxInInnoDB	trx_in_innodb(trx);
 
 	DBUG_ENTER("ha_innobase::delete_row");
+
+  DBUG_EXECUTE_IF("simulate_1",
+    {
+      const char act[]=
+        "now SIGNAL ha_innobase_delete_row_started "
+        "WAIT_FOR ha_innobase_delete_row_continue";
+      sql_print_information("++++++ syncpoint 1: ha_innobase::delete_row()");
+      DBUG_ASSERT(
+        !debug_sync_set_action(current_thd, STRING_WITH_LEN(act)));
+    });
 
 	if (!dict_table_is_intrinsic(m_prebuilt->table)
 	    && trx_in_innodb.is_aborted()) {
@@ -18172,6 +18185,8 @@ innobase_commit_by_xid(
 
 	if (trx != NULL) {
 		TrxInInnoDB	trx_in_innodb(trx);
+    ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+                 <<" trx_commit_by_xid()";
 
 		innobase_commit_low(trx);
                 ut_ad(trx->mysql_thd == NULL);

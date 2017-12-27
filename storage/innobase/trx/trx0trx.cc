@@ -54,6 +54,8 @@ Created 3/26/1996 Heikki Tuuri
 #include "ut0pool.h"
 #include "ut0vec.h"
 
+#include <debug_sync.h>
+
 #include <set>
 #include <new>
 
@@ -2019,6 +2021,8 @@ trx_commit_in_memory(
 			before doing commit and releasing locks. */
 			trx_erase_lists(trx, serialised);
 		}
+    ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+                 <<" trx_commit_in_memory()";
 
 		lock_trx_release_locks(trx);
 
@@ -2250,6 +2254,8 @@ trx_commit_low(
 		DEBUG_SYNC_C("before_trx_state_committed_in_memory");
 	}
 #endif
+  ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 1)
+                 <<" trx_commit_low()";
 
 	trx_commit_in_memory(trx, mtr, serialised);
 }
@@ -2274,8 +2280,21 @@ trx_commit(
 
 		mtr = NULL;
 	}
+    ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+                 <<" trx_commit()";
 
 	trx_commit_low(trx, mtr);
+
+  DBUG_EXECUTE_IF("simulate_2",
+    {
+        const char act[]=
+          "now SIGNAL innobase_commit_finished "
+          "WAIT_FOR innobase_commit_continue";
+        ib::info() << "++++++ syncpoint 2: trx_commit()";
+        DBUG_ASSERT(
+          !debug_sync_set_action(current_thd, STRING_WITH_LEN(act)));
+    });
+
 }
 
 /****************************************************************//**
