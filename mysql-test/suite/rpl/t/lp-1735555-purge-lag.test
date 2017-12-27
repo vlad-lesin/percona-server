@@ -1,0 +1,68 @@
+--source include/master-slave.inc
+--source include/have_innodb.inc
+--source include/have_binlog_format_mixed.inc
+--source include/have_debug_sync.inc
+
+#--let $isolation_level=REPEATABLE READ
+--let $isolation_level=READ COMMITTED
+
+--connection slave
+--eval SET TRANSACTION ISOLATION LEVEL $isolation_level;
+SET GLOBAL innodb_max_purge_lag=1;
+SET GLOBAL innodb_max_purge_lag_delay=1;
+
+--connection master
+--eval SET TRANSACTION ISOLATION LEVEL $isolation_level;
+
+CREATE TABLE t1 (t1_pk DECIMAL(20,0) PRIMARY KEY , t1_blob BLOB) ENGINE=InnoDB;
+
+INSERT INTO t1 VALUES (10000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (20000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (30000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (40000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (50000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (60000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (70000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (80000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (90000, REPEAT("a", 2165));
+INSERT INTO t1 VALUES (100000, REPEAT("a", 2165));
+
+--connection master
+DELETE FROM t1 WHERE t1_pk IN (90000, 80000);
+
+CREATE TABLE t2 (t2_pk INT PRIMARY KEY, t1_pk DECIMAL(20,0),
+  FOREIGN KEY (t1_pk) REFERENCES t1 (t1_pk)) ENGINE=InnoDB;
+
+--connect(con2,localhost,root)
+XA START '2';
+INSERT INTO t1 VALUES (85000, NULL);
+
+#-- We are inserting a value between 80000,100000
+
+--connection master
+XA START '1';
+INSERT INTO t2 VALUES (1, 100000);
+
+#-- This causes an S lock on 100000
+
+XA END '1';
+XA PREPARE '1';
+
+--connection con2
+XA END '2';
+XA PREPARE '2';
+
+--connection con2
+XA COMMIT '2';
+
+--connection master
+XA COMMIT '1';
+
+--connection master
+--source include/sync_slave_sql_with_master.inc
+
+--connection master
+DROP TABLE t2;
+DROP TABLE t1;
+
+--source include/rpl_end.inc

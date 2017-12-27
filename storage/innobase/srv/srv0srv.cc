@@ -76,6 +76,7 @@ Created 10/8/1995 Heikki Tuuri
 #include "handler.h"
 #include "ha_innodb.h"
 
+#include <debug_sync.h>
 
 #ifndef UNIV_PFS_THREAD
 #define create_thd(x,y,z,PFS_KEY)	create_thd(x,y,z,PFS_NOT_INSTRUMENTED.m_value)
@@ -3178,9 +3179,27 @@ DECLARE_THREAD(srv_purge_coordinator_thread)(
 		n_total_purged = 0;
 
 		srv_current_thread_priority = srv_purge_thread_priority;
+    DBUG_EXECUTE_IF("simulate_3",
+    {
+        const char act[]=
+          "now SIGNAL srv_do_purge_started "
+          "WAIT_FOR srv_do_purge_continue";
+        ib::info() << "++++++ syncpoint 3: srv_purge_coordinator_thread()";
+        DBUG_ASSERT(
+          !debug_sync_set_action(current_thd, STRING_WITH_LEN(act)));
+    });
 
 		rseg_history_len = srv_do_purge(
 			srv_n_purge_threads, &n_total_purged);
+    DBUG_EXECUTE_IF("simulate_4",
+    {
+        const char act[]=
+          "now SIGNAL srv_do_purge_finished "
+          "WAIT_FOR srv_do_purge_finish";
+        ib::info() << "++++++ syncpoint 4: srv_purge_coordinator_thread()";
+        DBUG_ASSERT(
+          !debug_sync_set_action(current_thd, STRING_WITH_LEN(act)));
+    });
 
 		srv_inc_activity_count();
 

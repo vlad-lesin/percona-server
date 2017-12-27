@@ -1834,6 +1834,12 @@ trx_purge(
 
 	ut_a(n_purge_threads > 0);
 
+
+  ib::info() << "==========>>>>>>>trx_purge() started"
+             << " n_purge_threads: " << n_purge_threads
+             << " batch_size: " << batch_size
+             << " truncate: " << truncate;
+
 	srv_dml_needed_delay = trx_purge_dml_delay();
 
 	/* The number of tasks submitted should be completed. */

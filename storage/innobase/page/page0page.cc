@@ -1177,6 +1177,12 @@ delete_all:
 	page_rec_set_next(last_rec, page_header_get_ptr(page, PAGE_FREE));
 	page_header_set_ptr(page, NULL, PAGE_FREE, rec);
 
+  if (block->page.id.page_no() == 5) {
+   ib::info() << "----------->"
+              << (current_thd ? thd_get_thread_id(current_thd) : 0)
+              << " page_delete_rec_list_end() page 5";
+  }
+
 	page_header_set_field(page, NULL, PAGE_GARBAGE, size
 			      + page_header_get_field(page, PAGE_GARBAGE));
 
@@ -1767,7 +1773,7 @@ page_print_list(
 
 	ut_a((ibool)!!page_is_comp(page) == dict_table_is_comp(index->table));
 
-	fprint(stderr,
+	fprintf(stderr,
 		"--------------------------------\n"
 		"PAGE RECORD LIST\n"
 		"Page address %p\n", page);

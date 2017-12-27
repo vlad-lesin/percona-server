@@ -3275,7 +3275,6 @@ fail_err:
 			if specified */
 			err = btr_cur_ins_lock_and_undo(flags, cursor, entry,
 							thr, mtr, &inherit);
-
 			if (err != DB_SUCCESS) {
 				goto fail_err;
 			}
