@@ -8,11 +8,11 @@
 
 --connection slave
 #SET GLOBAL innodb_lock_wait_timeout= 10;
---eval SET TRANSACTION ISOLATION LEVEL $isolation_level;
+--eval GLOBAL SET TRANSACTION ISOLATION LEVEL $isolation_level;
 
 --connection master
 #SET GLOBAL innodb_lock_wait_timeout= 10;
---eval SET TRANSACTION ISOLATION LEVEL $isolation_level;
+--eval SET GLOBAL TRANSACTION ISOLATION LEVEL $isolation_level;
 
 CREATE TABLE t1 (t1_pk DECIMAL(20,0) PRIMARY KEY , t1_blob BLOB) ENGINE=InnoDB;
 
