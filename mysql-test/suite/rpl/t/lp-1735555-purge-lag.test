@@ -7,12 +7,12 @@
 --let $isolation_level=READ COMMITTED
 
 --connection slave
---eval SET TRANSACTION ISOLATION LEVEL $isolation_level;
-SET GLOBAL innodb_max_purge_lag=1;
-SET GLOBAL innodb_max_purge_lag_delay=1;
+--eval SET GLOBAL TRANSACTION ISOLATION LEVEL $isolation_level;
+#SET GLOBAL innodb_max_purge_lag=1;
+#SET GLOBAL innodb_max_purge_lag_delay=1;
 
 --connection master
---eval SET TRANSACTION ISOLATION LEVEL $isolation_level;
+--eval SET GLOBAL TRANSACTION ISOLATION LEVEL $isolation_level;
 
 CREATE TABLE t1 (t1_pk DECIMAL(20,0) PRIMARY KEY , t1_blob BLOB) ENGINE=InnoDB;
 
@@ -60,6 +60,8 @@ XA COMMIT '1';
 
 --connection master
 --source include/sync_slave_sql_with_master.inc
+
+
 
 --connection master
 DROP TABLE t2;
