@@ -4759,6 +4759,16 @@ apply_event_and_update_pos(Log_event** ptr_ev, THD* thd, Relay_log_info* rli)
     if (sql_delay_event(ev, thd, rli))
       DBUG_RETURN(SLAVE_APPLY_EVENT_AND_UPDATE_POS_OK);
 
+    sql_print_information(
+      "------------> Binary log event type %d and is_rbr %d",
+      (int)ev->get_type_code(),
+      (int)ev->is_rbr_logging_format()
+      );
+    if (ev->is_rbr_logging_format()) {
+      sql_print_information(
+          "------------> RBR format, push breakpoint here!!!!");
+    }
+
     exec_res= ev->apply_event(rli);
 
     if (!exec_res && (ev->worker != rli))
