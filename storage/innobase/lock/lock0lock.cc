@@ -69,11 +69,7 @@ static void inline print_info_if_supremum(
     query = "";
 
   if (heap_no == PAGE_HEAP_NO_SUPREMUM) {
-    if (block->page.id.page_no() == 5) {
-      page_print(const_cast<buf_block_t *>(block), index, 100, 100);
-      ib::info() << "!!!!!!!!!!!!" << current_thd << " TADAAAAM";
-    }
-    ib::info() << ">>>>>>>>" << current_thd
+    ib::info() << ">>>>>>>>" << (current_thd ? thd_get_thread_id(current_thd) : 0)
                << " " << msg
                << " supremum on page "
                << block->page.id.page_no()
@@ -2509,7 +2505,7 @@ lock_rec_dequeue_from_page(
 	space = in_lock->un_member.rec_lock.space;
 	page_no = in_lock->un_member.rec_lock.page_no;
 
-  ib::info() << "///////////////////" << current_thd
+  ib::info() << "///////////////////" << (current_thd ? thd_get_thread_id(current_thd) : 0)
              << " lock_rec_dequeue_from_page"
              << " space: " << space
              << " page_no: " << page_no;
@@ -5903,9 +5899,9 @@ lock_rec_insert_check_and_lock(
       << " heap_no: " << heap_no;
 #ifndef UNIV_HOTBACKUP
 # ifdef UNIV_BTR_PRINT
-    if (block->page.id.page_no() == 5) {
-      page_print(block, index, 100, 100);
-    }
+//    if (block->page.id.page_no() == 5) {
+//      page_print(block, index, 100, 100);
+//    }
 # endif
 #endif
 		return(DB_SUCCESS);
@@ -6900,9 +6896,9 @@ lock_trx_release_locks(
 	trx_mutex_exit(trx);
 
 	if (release_lock) {
-  ib::info() << "XXXXXX " << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
-
-                 <<" lock_trx_release_locks()";
+  ib::info() << "XXXXXX " << " lock_sec_rec_read_check_and_lock() "
+             << (trx->mysql_thd ? thd_get_thread_id(trx->mysql_thd) : 0)
+             <<" lock_trx_release_locks()";
 
 		lock_release(trx);
 

@@ -652,8 +652,11 @@ public:
 		m_rec_id(block, heap_no)
 	{
 		btr_assert_not_corrupted(block, index);
-  if (heap_no == PAGE_HEAP_NO_SUPREMUM && block->page.id.page_no() == 5) {
-      ib::info() << "!!!!!!<<<<<<<>>>>>>>!!!!!!" << current_thd << " TADAAAAAAM";
+  if (heap_no == PAGE_HEAP_NO_SUPREMUM) {
+      ib::info() << "!!!!!!RecLock::RecLock() for supremum "
+                 << " thread id: " << (m_trx->mysql_thd ? thd_get_thread_id(m_trx->mysql_thd) : 0)
+                 << " page_no: " << block->page.id.page_no()
+                 << " mode: " << mode;
   }
 
 		init(block->frame);

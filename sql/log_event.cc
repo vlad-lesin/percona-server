@@ -1545,10 +1545,6 @@ Log_event* Log_event::read_log_event(const char* buf, uint event_len,
   }
 
   uint event_type= static_cast<const uchar>(buf[EVENT_TYPE_OFFSET]);
-  if (event_type == binary_log::FORMAT_DESCRIPTION_EVENT ||
-      event_type == binary_log::WRITE_ROWS_EVENT) {
-    sql_print_information("!!!!===> set breakpoint here");
-  }
   // all following START events in the current file are without checksum
   if (event_type == binary_log::START_EVENT_V3)
     (const_cast<Format_description_log_event*>(description_event))->
