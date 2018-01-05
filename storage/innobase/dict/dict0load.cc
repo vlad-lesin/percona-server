@@ -1559,9 +1559,9 @@ dict_check_sys_tables(
 		be in a file-per-table or shared tablespace.
 		Note that flags2 is not available for REDUNDANT tables,
 		so don't check those. */
-		ut_ad(DICT_TF_HAS_SHARED_SPACE(flags)
-		      || !DICT_TF_GET_COMPACT(flags)
-		      || flags2 & DICT_TF2_USE_FILE_PER_TABLE);
+		//ut_ad(DICT_TF_HAS_SHARED_SPACE(flags)
+		//      || !DICT_TF_GET_COMPACT(flags)
+		//      || flags2 & DICT_TF2_USE_FILE_PER_TABLE);
 
 		/* Look up the tablespace name in the data dictionary if this
 		is a shared tablespace.  For file-per-table, the table_name

@@ -652,12 +652,6 @@ public:
 		m_rec_id(block, heap_no)
 	{
 		btr_assert_not_corrupted(block, index);
-  if (heap_no == PAGE_HEAP_NO_SUPREMUM) {
-      ib::info() << "!!!!!!RecLock::RecLock() for supremum "
-                 << " thread id: " << (m_trx->mysql_thd ? thd_get_thread_id(m_trx->mysql_thd) : 0)
-                 << " page_no: " << block->page.id.page_no()
-                 << " mode: " << mode;
-  }
 
 		init(block->frame);
 	}
@@ -857,6 +851,19 @@ private:
 
 		m_size = is_predicate_lock(m_mode)
 			  ? lock_size(m_mode) : lock_size(page);
+
+  if (m_rec_id.m_heap_no == PAGE_HEAP_NO_SUPREMUM) {
+      ib::info() << "!!!!!!RecLock::init() for supremum "
+                 << " thread id: " << (current_thd ? thd_get_thread_id(current_thd) : 0)
+                 << " page_no: " << m_rec_id.m_page_no
+                 << " mode: " << m_mode
+		 << " trx->id: " << (m_trx ? m_trx->id : 0)
+		 << " trx->id_saved: " << (m_trx ? m_trx->id_saved : 0);
+	if (m_rec_id.m_page_no == 1056018) {
+		ib::info() << "^^^^^^^^^^^^^^^^^^SET BREAKPOINT HERE!";
+	}
+  }
+
 
 		/** If rec is the supremum record, then we reset the
 		gap and LOCK_REC_NOT_GAP bits, as all locks on the

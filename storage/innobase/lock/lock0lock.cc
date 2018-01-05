@@ -69,6 +69,9 @@ static void inline print_info_if_supremum(
     query = "";
 
   if (heap_no == PAGE_HEAP_NO_SUPREMUM) {
+	if (block->page.id.page_no() == 1056018)
+		ib::info() << ">>>>>>>>>>>!!!!!!!!!!!!!!!!!!!!!!!!!TADAAAAM";
+
     ib::info() << ">>>>>>>>" << (current_thd ? thd_get_thread_id(current_thd) : 0)
                << " " << msg
                << " supremum on page "
@@ -1925,6 +1928,15 @@ lock_rec_lock_fast(
 	trx_t*	trx = thr_get_trx(thr);
 
 	lock_rec_req_status	status = LOCK_REC_SUCCESS;
+        if (heap_no  == PAGE_HEAP_NO_SUPREMUM) {
+	   ib::info() << "!!!"
+	      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+              << " lock_rec_lock_fast() for supremum, page id: "		
+	      << block->page.id.page_no()
+	      << ", mode: " << mode;
+	}
+              
+
 
 	if (lock == NULL) {
 
@@ -1999,6 +2011,14 @@ lock_rec_lock_slow(
 	ut_ad(dict_index_is_clust(index) || !dict_index_is_online_ddl(index));
 
 	DBUG_EXECUTE_IF("innodb_report_deadlock", return(DB_DEADLOCK););
+
+        if (heap_no  == PAGE_HEAP_NO_SUPREMUM) {
+	   ib::info() << "!!!"
+	      << (current_thd ? thd_get_thread_id(current_thd) : 0)
+              << " lock_rec_lock_slow() for supremum, page id: "		
+	      << block->page.id.page_no()
+	      << ", mode: " << mode;
+	}
 
 	dberr_t	err;
 	trx_t*	trx = thr_get_trx(thr);
@@ -5899,9 +5919,9 @@ lock_rec_insert_check_and_lock(
       << " heap_no: " << heap_no;
 #ifndef UNIV_HOTBACKUP
 # ifdef UNIV_BTR_PRINT
-//    if (block->page.id.page_no() == 5) {
-//      page_print(block, index, 100, 100);
-//    }
+    if (block->page.id.page_no() == 1056018) {
+      page_print(block, index, 100, 100);
+    }
 # endif
 #endif
 		return(DB_SUCCESS);
