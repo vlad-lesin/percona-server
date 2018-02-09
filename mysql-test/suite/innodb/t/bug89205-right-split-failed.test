@@ -1,0 +1,106 @@
+--source include/have_innodb.inc
+--source include/count_sessions.inc
+
+SET @old_tx_isolation := @@global.transaction_isolation;
+SET GLOBAL TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
+CREATE TABLE t1 (t1_pk DECIMAL(20,0) PRIMARY KEY , t1_blob BLOB) ENGINE=InnoDB;
+
+--echo # Initial filling
+INSERT INTO t1 VALUES (10000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (20000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (30000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (40000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (50000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (60000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (70000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (80000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (90000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (100000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (110000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (120000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (130000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (140000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (150000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (160000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (170000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (180000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (190000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (200000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (210000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (220000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (230000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (240000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (250000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (260000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (270000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (280000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (290000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (300000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (310000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (320000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (330000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (340000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (350000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (360000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (370000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (380000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (390000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (400000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (410000, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (420002, REPEAT("a", 1082));
+
+--echo # Insert records somewhere in the middle to cause page split
+INSERT INTO t1 VALUES (18100, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (18200, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (18300, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (18400, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (18500, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (18600, REPEAT("a", 1082));
+INSERT INTO t1 VALUES (18700, REPEAT("a", 1082));
+-- echo # The page is full now, the next insert will cause page split
+
+
+
+CREATE TABLE t2 (t2_pk INT PRIMARY KEY, t1_pk DECIMAL(20,0),
+  FOREIGN KEY (t1_pk) REFERENCES t1 (t1_pk)) ENGINE=InnoDB;
+
+XA START '2';
+--echo # Create S-lock on t1 record with pk = 30000, this record will be the
+--echo # first record on the right-half page during future splitting,
+--echo # pay attention, this is not a gap lock,
+--echo # so this lock is permitted for READ COMMITTED
+INSERT INTO t2 VALUES (1, 30000);
+XA END '2';
+XA PREPARE '2';
+
+--connect (con1,localhost,root)
+
+XA START '1';
+--echo # Page right-split is here, the first record of new right-half page
+--echo # is the record with pk = 30000, which was previosly S-locked,
+--echo # the S-lock from this page is copied to the supremum of left-half page
+--echo # causing gap-lock which is forbidden for READ COMMITED
+INSERT INTO t1 VALUES (18800, REPEAT("a", 1082));
+XA END '1';
+XA PREPARE '1';
+
+
+--connect(con2,localhost,root)
+--echo # Trying to insert something into the locked gap,
+--echo # getting lock wait timeout here despite READ COMMITTED
+INSERT INTO t1 VALUES (29900, REPEAT("a", 1082));
+
+--connection con1
+XA COMMIT '1';
+
+--connection default
+XA COMMIT '2';
+
+SET @@global.transaction_isolation = @old_tx_isolation;
+
+DROP TABLE t2;
+DROP TABLE t1;
+--disconnect con1
+--disconnect con2
+--source include/wait_until_count_sessions.inc
