@@ -88,6 +88,9 @@ need to protect it by a mutex. It is only ever read by the thread
 doing the shutdown */
 bool buf_page_cleaner_is_active = false;
 
+/** The number of running LRU manager threads. 0 if LRU manager is inactive. */
+std::atomic<ulint> buf_lru_manager_running_threads(0);
+
 #ifndef UNIV_HOTBACKUP
 /** Factor for scan length to determine n_pages for intended oldest LSN
 progress */
@@ -102,6 +105,7 @@ static lsn_t buf_flush_sync_lsn = 0;
 #ifdef UNIV_PFS_THREAD
 mysql_pfs_key_t	page_flush_thread_key;
 mysql_pfs_key_t	page_flush_coordinator_thread_key;
+mysql_pfs_key_t	buf_lru_manager_thread_key;
 #endif /* UNIV_PFS_THREAD */
 
 /** Event to synchronise with the flushing. */
@@ -129,8 +133,8 @@ struct page_cleaner_slot_t {
 					protected by page_cleaner_t::mutex
 					if the worker thread got the slot and
 					set to PAGE_CLEANER_STATE_FLUSHING,
-					n_flushed_lru and n_flushed_list can be
-					updated only by the worker thread */
+					n_flushed_list can be updated only by
+					the worker thread */
 	/* This value is set during state==PAGE_CLEANER_STATE_NONE */
 	ulint			n_pages_requested;
 					/*!< number of requested pages
@@ -138,22 +142,15 @@ struct page_cleaner_slot_t {
 	/* These values are updated during state==PAGE_CLEANER_STATE_FLUSHING,
 	and commited with state==PAGE_CLEANER_STATE_FINISHED.
 	The consistency is protected by the 'state' */
-	ulint			n_flushed_lru;
-					/*!< number of flushed and evicted
-					pages by LRU scan flushing */
 	ulint			n_flushed_list;
 					/*!< number of flushed pages
 					by flush_list flushing */
 	bool			succeeded_list;
 					/*!< true if flush_list flushing
 					succeeded. */
-	ulint			flush_lru_time;
-					/*!< elapsed time for LRU flushing */
 	ulint			flush_list_time;
 					/*!< elapsed time for flush_list
 					flushing */
-	ulint			flush_lru_pass;
-					/*!< count to attempt LRU flushing */
 	ulint			flush_list_pass;
 					/*!< count to attempt flush_list
 					flushing */
@@ -227,6 +224,14 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners);
 static
 void
 buf_flush_page_cleaner_thread();
+
+/** LRU manager thread for performing LRU flushed and evictions for buffer pool
+free list refill. One thread is created for each buffer pool instace.
+@param[in]	arg	buffer pool instance number for this thread
+@return a dummy value */
+static
+void
+buf_lru_manager_thread();
 
 /******************************************************************//**
 Increases flush_list size in bytes with the page size in inline function */
@@ -2023,26 +2028,6 @@ buf_flush_batch(
 	return(res);
 }
 
-/******************************************************************//**
-Gather the aggregated stats for both flush list and LRU list flushing.
-@param page_count_flush	number of pages flushed from the end of the flush_list
-@param page_count_LRU	number of pages flushed from the end of the LRU list
-*/
-static
-void
-buf_flush_stats(
-/*============*/
-	ulint		page_count_flush,
-	ulint		page_count_LRU)
-{
-	DBUG_PRINT("ib_buf", ("flush completed, from flush_list %u pages, "
-			      "from LRU_list %u pages",
-			      unsigned(page_count_flush),
-			      unsigned(page_count_LRU)));
-
-	srv_stats.buf_pool_flushed.add(page_count_flush + page_count_LRU);
-}
-
 /** Start a buffer flush batch for LRU or flush list
 @param[in]	buf_pool	buffer pool instance
 @param[in]	flush_type	BUF_FLUSH_LRU or BUF_FLUSH_LIST */
@@ -2302,7 +2287,7 @@ buf_flush_lists(
 	}
 
 	if (n_flushed) {
-		buf_flush_stats(n_flushed, 0);
+		srv_stats.buf_pool_flushed.add(n_flushed);
 	}
 
 	if (n_processed) {
@@ -2620,9 +2605,7 @@ page_cleaner_flush_pages_recommendation(
 		page_cleaner->flush_time = 0;
 		page_cleaner->flush_pass = 0;
 
-		ulint	lru_tm = 0;
 		ulint	list_tm = 0;
-		ulint	lru_pass = 0;
 		ulint	list_pass = 0;
 
 		for (ulint i = 0; i < page_cleaner->n_slots; i++) {
@@ -2630,13 +2613,9 @@ page_cleaner_flush_pages_recommendation(
 
 			slot = &page_cleaner->slots[i];
 
-			lru_tm    += slot->flush_lru_time;
-			lru_pass  += slot->flush_lru_pass;
 			list_tm   += slot->flush_list_time;
 			list_pass += slot->flush_list_pass;
 
-			slot->flush_lru_time  = 0;
-			slot->flush_lru_pass  = 0;
 			slot->flush_list_time = 0;
 			slot->flush_list_pass = 0;
 		}
@@ -2644,9 +2623,6 @@ page_cleaner_flush_pages_recommendation(
 		mutex_exit(&page_cleaner->mutex);
 
 		/* minimum values are 1, to avoid dividing by zero. */
-		if (lru_tm < 1) {
-			lru_tm = 1;
-		}
 		if (list_tm < 1) {
 			list_tm = 1;
 		}
@@ -2654,9 +2630,6 @@ page_cleaner_flush_pages_recommendation(
 			flush_tm = 1;
 		}
 
-		if (lru_pass < 1) {
-			lru_pass = 1;
-		}
 		if (list_pass < 1) {
 			list_pass = 1;
 		}
@@ -2666,25 +2639,16 @@ page_cleaner_flush_pages_recommendation(
 
 		MONITOR_SET(MONITOR_FLUSH_ADAPTIVE_AVG_TIME_SLOT,
 			    list_tm / list_pass);
-		MONITOR_SET(MONITOR_LRU_BATCH_FLUSH_AVG_TIME_SLOT,
-			    lru_tm  / lru_pass);
 
 		MONITOR_SET(MONITOR_FLUSH_ADAPTIVE_AVG_TIME_THREAD,
 			    list_tm / (srv_n_page_cleaners * flush_pass));
-		MONITOR_SET(MONITOR_LRU_BATCH_FLUSH_AVG_TIME_THREAD,
-			    lru_tm / (srv_n_page_cleaners * flush_pass));
 		MONITOR_SET(MONITOR_FLUSH_ADAPTIVE_AVG_TIME_EST,
 			    flush_tm * list_tm / flush_pass
-			    / (list_tm + lru_tm));
-		MONITOR_SET(MONITOR_LRU_BATCH_FLUSH_AVG_TIME_EST,
-			    flush_tm * lru_tm / flush_pass
-			    / (list_tm + lru_tm));
+			    / list_tm);
 		MONITOR_SET(MONITOR_FLUSH_AVG_TIME, flush_tm / flush_pass);
 
 		MONITOR_SET(MONITOR_FLUSH_ADAPTIVE_AVG_PASS,
 			    list_pass / page_cleaner->n_slots);
-		MONITOR_SET(MONITOR_LRU_BATCH_FLUSH_AVG_PASS,
-			    lru_pass / page_cleaner->n_slots);
 		MONITOR_SET(MONITOR_FLUSH_AVG_PASS, flush_pass);
 
 		prev_lsn = cur_lsn;
@@ -2844,7 +2808,11 @@ buf_flush_page_cleaner_init(size_t n_page_cleaners)
 		buf_flush_page_coordinator_thread,
 		n_page_cleaners);
 
-	/* Make sure page cleaner is active. */
+	os_thread_create(
+		buf_lru_manager_thread_key,
+		buf_lru_manager_thread);
+
+	/* Make sure page cleaner and LRU managers are active. */
 
 	while (!buf_page_cleaner_is_active) {
 		os_thread_sleep(10000);
@@ -2939,9 +2907,7 @@ static
 ulint
 pc_flush_slot(void)
 {
-	ulint	lru_tm = 0;
 	ulint	list_tm = 0;
-	int	lru_pass = 0;
 	int	list_pass = 0;
 
 	mutex_enter(&page_cleaner->mutex);
@@ -2973,25 +2939,11 @@ pc_flush_slot(void)
 		}
 
 		if (!page_cleaner->is_running) {
-			slot->n_flushed_lru = 0;
 			slot->n_flushed_list = 0;
 			goto finish_mutex;
 		}
 
 		mutex_exit(&page_cleaner->mutex);
-
-		lru_tm = ut_time_ms();
-
-		/* Flush pages from end of LRU if required */
-		slot->n_flushed_lru = buf_flush_LRU_list(buf_pool);
-
-		lru_tm = ut_time_ms() - lru_tm;
-		lru_pass++;
-
-		if (!page_cleaner->is_running) {
-			slot->n_flushed_list = 0;
-			goto finish;
-		}
 
 		/* Flush pages from flush_list if required */
 		if (page_cleaner->requested) {
@@ -3010,16 +2962,13 @@ pc_flush_slot(void)
 			slot->n_flushed_list = 0;
 			slot->succeeded_list = true;
 		}
-finish:
 		mutex_enter(&page_cleaner->mutex);
 finish_mutex:
 		page_cleaner->n_slots_flushing--;
 		page_cleaner->n_slots_finished++;
 		slot->state = PAGE_CLEANER_STATE_FINISHED;
 
-		slot->flush_lru_time += lru_tm;
 		slot->flush_list_time += list_tm;
-		slot->flush_lru_pass += lru_pass;
 		slot->flush_list_pass += list_pass;
 
 		if (page_cleaner->n_slots_requested == 0
@@ -3037,20 +2986,16 @@ finish_mutex:
 
 /**
 Wait until all flush requests are finished.
-@param n_flushed_lru	number of pages flushed and evicted from the end of the
-                        LRU list.
 @param n_flushed_list	number of pages flushed from the end of the
 			flush_list.
 @return			true if all flush_list flushing batch were success. */
 static
 bool
 pc_wait_finished(
-	ulint*	n_flushed_lru,
 	ulint*	n_flushed_list)
 {
 	bool	all_succeeded = true;
 
-	*n_flushed_lru = 0;
 	*n_flushed_list = 0;
 
 	os_event_wait(page_cleaner->is_finished);
@@ -3066,7 +3011,6 @@ pc_wait_finished(
 
 		ut_ad(slot->state == PAGE_CLEANER_STATE_FINISHED);
 
-		*n_flushed_lru += slot->n_flushed_lru;
 		*n_flushed_list += slot->n_flushed_list;
 		all_succeeded &= slot->succeeded_list;
 
@@ -3086,7 +3030,7 @@ pc_wait_finished(
 
 #ifdef UNIV_LINUX
 /**
-Set priority for page_cleaner threads.
+Set priority for page_cleaner and LRU manager threads.
 @param[in]	priority	priority intended to set
 @return	true if set as intended */
 static
@@ -3102,17 +3046,17 @@ buf_flush_page_cleaner_set_priority(
 #endif /* UNIV_LINUX */
 
 #ifdef UNIV_DEBUG
-/** Loop used to disable page cleaner threads. */
+/** Loop used to disable page cleaner and LRU manager threads. */
 static
 void
 buf_flush_page_cleaner_disabled_loop(void)
 {
-	ut_ad(page_cleaner != NULL);
-
 	if (!innodb_page_cleaner_disabled_debug) {
 		/* We return to avoid entering and exiting mutex. */
 		return;
 	}
+
+	ut_ad(page_cleaner != NULL);
 
 	mutex_enter(&page_cleaner->mutex);
 	page_cleaner->n_disabled_debug++;
@@ -3143,8 +3087,8 @@ buf_flush_page_cleaner_disabled_loop(void)
 	mutex_exit(&page_cleaner->mutex);
 }
 
-/** Disables page cleaner threads (coordinator and workers).
-It's used by: SET GLOBAL innodb_page_cleaner_disabled_debug = 1 (0).
+/** Disables page cleaner threads (coordinator and workers) and LRU manager
+threads. It's used by: SET GLOBAL innodb_page_cleaner_disabled_debug = 1 (0).
 @param[in]	thd		thread handle
 @param[in]	var		pointer to system variable
 @param[out]	var_ptr		where the formal string goes
@@ -3167,7 +3111,7 @@ buf_flush_page_cleaner_disabled_debug_update(
 
 		innodb_page_cleaner_disabled_debug = false;
 
-		/* Enable page cleaner threads. */
+		/* Enable page cleaner and LRU manager threads. */
 		while (srv_shutdown_state == SRV_SHUTDOWN_NONE) {
 			mutex_enter(&page_cleaner->mutex);
 			const ulint n = page_cleaner->n_disabled_debug;
@@ -3201,10 +3145,12 @@ buf_flush_page_cleaner_disabled_debug_update(
 		mutex_enter(&page_cleaner->mutex);
 
 		ut_ad(page_cleaner->n_disabled_debug
-		      <= srv_n_page_cleaners);
+		      <= (srv_n_page_cleaners
+			  + buf_lru_manager_running_threads));
 
 		if (page_cleaner->n_disabled_debug
-		    == srv_n_page_cleaners) {
+		    == (srv_n_page_cleaners
+			+ buf_lru_manager_running_threads)) {
 
 			mutex_exit(&page_cleaner->mutex);
 			break;
@@ -3241,7 +3187,7 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 			<< buf_flush_page_cleaner_priority;
 	} else {
 		ib::info() << "If the mysqld execution user is authorized,"
-		" page cleaner thread priority can be changed."
+		" page cleaner and LRU manager thread priority can be changed."
 		" See the man page of setpriority().";
 	}
 #endif /* UNIV_LINUX */
@@ -3263,7 +3209,6 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 	       && recv_sys->spaces != NULL) {
 
 		/* treat flushing requests during recovery. */
-		ulint	n_flushed_lru = 0;
 		ulint	n_flushed_list = 0;
 
 		os_event_wait(recv_sys->flush_start);
@@ -3274,26 +3219,11 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 			break;
 		}
 
-		switch (recv_sys->flush_type) {
-		case BUF_FLUSH_LRU:
-			/* Flush pages from end of LRU if required */
-			pc_request(0, LSN_MAX);
+		/* Flush all pages */
+		do {
+			pc_request(ULINT_MAX, LSN_MAX);
 			while (pc_flush_slot() > 0) {}
-			pc_wait_finished(&n_flushed_lru, &n_flushed_list);
-			break;
-
-		case BUF_FLUSH_LIST:
-			/* Flush all pages */
-			do {
-				pc_request(ULINT_MAX, LSN_MAX);
-				while (pc_flush_slot() > 0) {}
-			} while (!pc_wait_finished(&n_flushed_lru,
-						   &n_flushed_list));
-			break;
-
-		default:
-			ut_ad(0);
-		}
+		} while (!pc_wait_finished(&n_flushed_list));
 
 		os_event_reset(recv_sys->flush_start);
 		os_event_set(recv_sys->flush_end);
@@ -3302,7 +3232,6 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 	os_event_wait(buf_flush_event);
 
 	ulint		ret_sleep = 0;
-	ulint		n_evicted = 0;
 	ulint		n_flushed_last = 0;
 	ulint		warn_interval = 1;
 	ulint		warn_count = 0;
@@ -3343,9 +3272,7 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 					ib::info()
 						<< "Page cleaner took "
 						<< us << "ms to flush"
-						<< n_flushed_last
-						<< " and evict "
-						<< n_evicted << " pages";
+						<< n_flushed_last << " pages";
 
 					if (warn_interval > 300) {
 						warn_interval = 600;
@@ -3364,7 +3291,7 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 			}
 
 			next_loop_time = curr_time + 1000;
-			n_flushed_last = n_evicted = 0;
+			n_flushed_last = 0;
 		}
 
 		if (ret_sleep != OS_SYNC_TIME_EXCEEDED
@@ -3390,21 +3317,20 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 			page_cleaner->flush_pass++;
 
 			/* Wait for all slots to be finished */
-			ulint	n_flushed_lru = 0;
 			ulint	n_flushed_list = 0;
-			pc_wait_finished(&n_flushed_lru, &n_flushed_list);
+			pc_wait_finished(&n_flushed_list);
 
-			if (n_flushed_list > 0 || n_flushed_lru > 0) {
-				buf_flush_stats(n_flushed_list, n_flushed_lru);
+			if (n_flushed_list > 0) {
+				srv_stats.buf_pool_flushed.add(n_flushed_list);
 
 				MONITOR_INC_VALUE_CUMULATIVE(
 					MONITOR_FLUSH_SYNC_TOTAL_PAGE,
 					MONITOR_FLUSH_SYNC_COUNT,
 					MONITOR_FLUSH_SYNC_PAGES,
-					n_flushed_lru + n_flushed_list);
+					n_flushed_list);
 			}
 
-			n_flushed = n_flushed_lru + n_flushed_list;
+			n_flushed = n_flushed_list;
 
 		} else if (srv_check_activity(last_activity)) {
 			ulint	n_to_flush;
@@ -3436,31 +3362,21 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 			page_cleaner->flush_pass++ ;
 
 			/* Wait for all slots to be finished */
-			ulint	n_flushed_lru = 0;
 			ulint	n_flushed_list = 0;
 
-			pc_wait_finished(&n_flushed_lru, &n_flushed_list);
+			pc_wait_finished(&n_flushed_list);
 
-			if (n_flushed_list > 0 || n_flushed_lru > 0) {
-				buf_flush_stats(n_flushed_list, n_flushed_lru);
+			if (n_flushed_list > 0) {
+				srv_stats.buf_pool_flushed.add(n_flushed_list);
 			}
 
 			if (ret_sleep == OS_SYNC_TIME_EXCEEDED) {
 				last_pages = n_flushed_list;
 			}
 
-			n_evicted += n_flushed_lru;
 			n_flushed_last += n_flushed_list;
 
-			n_flushed = n_flushed_lru + n_flushed_list;
-
-			if (n_flushed_lru) {
-				MONITOR_INC_VALUE_CUMULATIVE(
-					MONITOR_LRU_BATCH_FLUSH_TOTAL_PAGE,
-					MONITOR_LRU_BATCH_FLUSH_COUNT,
-					MONITOR_LRU_BATCH_FLUSH_PAGES,
-					n_flushed_lru);
-			}
+			n_flushed = n_flushed_list;
 
 			if (n_flushed_list) {
 				MONITOR_INC_VALUE_CUMULATIVE(
@@ -3487,7 +3403,6 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 
 		} else {
 			/* no activity, but woken up by event */
-			n_flushed = 0;
 		}
 
 		ut_d(buf_flush_page_cleaner_disabled_loop());
@@ -3512,24 +3427,27 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 	when SRV_SHUTDOWN_CLEANUP is set other threads like the master
 	and the purge threads may be working as well. We start flushing
 	the buffer pool but can't be sure that no new pages are being
-	dirtied until we enter SRV_SHUTDOWN_FLUSH_PHASE phase. */
+	dirtied until we enter SRV_SHUTDOWN_FLUSH_PHASE phase. Because
+	the LRU manager thread is also flushing at SRV_SHUTDOWN_CLEANUP
+	but not SRV_SHUTDOWN_FLUSH_PHASE, we only leave the
+	SRV_SHUTDOWN_CLEANUP loop when the LRU manager quits. */
 
 	do {
 		pc_request(ULINT_MAX, LSN_MAX);
 
 		while (pc_flush_slot() > 0) {}
 
-		ulint	n_flushed_lru = 0;
 		ulint	n_flushed_list = 0;
-		pc_wait_finished(&n_flushed_lru, &n_flushed_list);
+		pc_wait_finished(&n_flushed_list);
 
-		n_flushed = n_flushed_lru + n_flushed_list;
+		n_flushed = n_flushed_list;
 
 		/* We sleep only if there are no pages to flush */
 		if (n_flushed == 0) {
 			os_thread_sleep(100000);
 		}
-	} while (srv_shutdown_state == SRV_SHUTDOWN_CLEANUP);
+	} while (srv_shutdown_state == SRV_SHUTDOWN_CLEANUP
+		 || buf_lru_manager_running_threads > 0);
 
 	/* At this point all threads including the master and the purge
 	thread must have been suspended. */
@@ -3544,7 +3462,7 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 	sweep and we'll come out of the loop leaving behind dirty pages
 	in the flush_list */
 	buf_flush_wait_batch_end(NULL, BUF_FLUSH_LIST);
-	buf_flush_wait_LRU_batch_end();
+	ut_ad(buf_lru_manager_running_threads == 0);
 
 	bool	success;
 
@@ -3553,14 +3471,12 @@ buf_flush_page_coordinator_thread(size_t n_page_cleaners)
 
 		while (pc_flush_slot() > 0) {}
 
-		ulint	n_flushed_lru = 0;
 		ulint	n_flushed_list = 0;
-		success = pc_wait_finished(&n_flushed_lru, &n_flushed_list);
+		success = pc_wait_finished(&n_flushed_list);
 
-		n_flushed = n_flushed_lru + n_flushed_list;
+		n_flushed = n_flushed_list;
 
 		buf_flush_wait_batch_end(NULL, BUF_FLUSH_LIST);
-		buf_flush_wait_LRU_batch_end();
 
 	} while (!success || n_flushed > 0);
 
@@ -3625,6 +3541,133 @@ buf_flush_page_cleaner_thread()
 	mutex_enter(&page_cleaner->mutex);
 	--page_cleaner->n_workers;
 	mutex_exit(&page_cleaner->mutex);
+	my_thread_end();
+}
+
+/** Make a LRU manager thread sleep until the passed target time, if it's not
+already in the past.
+@param[in]	next_loop_time	desired wake up time */
+static
+void
+buf_lru_manager_sleep_if_needed(
+	ulint	next_loop_time)
+{
+	/* If this is the server shutdown buffer pool flushing phase, skip the
+	sleep to quit this thread faster */
+	if (srv_shutdown_state == SRV_SHUTDOWN_FLUSH_PHASE)
+		return;
+
+	ulint	cur_time	= ut_time_ms();
+
+	if (next_loop_time > cur_time) {
+		/* Get sleep interval in micro seconds. We use
+		ut_min() to avoid long sleep in case of
+		wrap around. */
+		os_thread_sleep(std::min(1000000UL,
+					 (next_loop_time - cur_time)
+					 * 1000));
+	}
+}
+
+/** Adjust the LRU manager thread sleep time based on the free list length and
+the last flush result
+@param[in]	buf_pool	buffer pool whom we are flushing
+@param[in]	lru_n_flushed	last LRU flush page count
+@param[in,out]	lru_sleep_time	LRU manager thread sleep time */
+static
+void
+buf_lru_manager_adapt_sleep_time(
+	const buf_pool_t*	buf_pool,
+	ulint			lru_n_flushed,
+	ulint*			lru_sleep_time)
+{
+	const ulint free_len = UT_LIST_GET_LEN(buf_pool->free);
+	const ulint max_free_len = std::min(
+		UT_LIST_GET_LEN(buf_pool->LRU), srv_LRU_scan_depth);
+
+	if (free_len < max_free_len / 100 && lru_n_flushed) {
+
+		/* Free list filled less than 1% and the last iteration was
+		able to flush, no sleep */
+		*lru_sleep_time = 0;
+	} else if (free_len > max_free_len / 5
+		   || (free_len < max_free_len / 100 && lru_n_flushed == 0)) {
+
+		/* Free list filled more than 20% or no pages flushed in the
+		previous batch, sleep a bit more */
+		*lru_sleep_time += 1;
+		if (*lru_sleep_time > 1000)
+			*lru_sleep_time = 1000;
+	} else if (free_len < max_free_len / 20 && *lru_sleep_time >= 50) {
+
+		/* Free list filled less than 5%, sleep a bit less */
+		*lru_sleep_time -= 50;
+	} else {
+
+		/* Free lists filled between 5% and 20%, no change */
+	}
+}
+/** LRU manager thread for performing LRU flushed and evictions for buffer pool
+free list refill. One thread is created for each buffer pool instace.
+@param[in]	arg	buffer pool instance number for this thread
+@return a dummy value */
+static
+void
+buf_lru_manager_thread()
+{
+	my_thread_init();
+
+#ifdef UNIV_LINUX
+	/* linux might be able to set different setting for each thread
+	worth to try to set high priority for page cleaner threads */
+	if (buf_flush_page_cleaner_set_priority(
+		    buf_flush_page_cleaner_priority)) {
+
+		ib::info() << "lru_manager worker priority: "
+			   << buf_flush_page_cleaner_priority;
+	}
+#endif /* UNIV_LINUX */
+
+	ulong	i = buf_lru_manager_running_threads.fetch_add(1);
+	ut_ad(i < srv_buf_pool_instances);
+
+	buf_pool_t*	buf_pool = buf_pool_from_array(i);
+
+	ulint	lru_sleep_time	= 1000;
+	ulint	next_loop_time	= ut_time_ms() + lru_sleep_time;
+	ulint	lru_n_flushed	= 1;
+
+	/* On server shutdown, the LRU manager thread runs through cleanup
+	phase to provide free pages for the master and purge threads.  */
+	while (srv_shutdown_state == SRV_SHUTDOWN_NONE
+	       || srv_shutdown_state == SRV_SHUTDOWN_CLEANUP) {
+
+		ut_d(buf_flush_page_cleaner_disabled_loop());
+
+		buf_lru_manager_sleep_if_needed(next_loop_time);
+
+		buf_lru_manager_adapt_sleep_time(buf_pool, lru_n_flushed,
+						 &lru_sleep_time);
+
+		next_loop_time = ut_time_ms() + lru_sleep_time;
+
+		lru_n_flushed = buf_flush_LRU_list(buf_pool);
+
+		buf_flush_wait_batch_end(buf_pool, BUF_FLUSH_LRU);
+
+		if (lru_n_flushed) {
+			srv_stats.buf_pool_flushed.add(lru_n_flushed);
+
+			MONITOR_INC_VALUE_CUMULATIVE(
+				MONITOR_LRU_BATCH_FLUSH_TOTAL_PAGE,
+				MONITOR_LRU_BATCH_FLUSH_COUNT,
+				MONITOR_LRU_BATCH_FLUSH_PAGES,
+				lru_n_flushed);
+		}
+	}
+
+	buf_lru_manager_running_threads--;
+
 	my_thread_end();
 }
 
