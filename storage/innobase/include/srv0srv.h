@@ -605,6 +605,7 @@ extern srv_stats_t srv_stats;
 #ifdef UNIV_PFS_THREAD
 extern mysql_pfs_key_t archiver_thread_key;
 extern mysql_pfs_key_t buf_dump_thread_key;
+extern mysql_pfs_key_t buf_lru_manager_thread_key;
 extern mysql_pfs_key_t buf_resize_thread_key;
 extern mysql_pfs_key_t dict_stats_thread_key;
 extern mysql_pfs_key_t fts_optimize_thread_key;
@@ -623,7 +624,6 @@ extern mysql_pfs_key_t log_write_notifier_thread_key;
 extern mysql_pfs_key_t log_flush_notifier_thread_key;
 extern mysql_pfs_key_t page_flush_coordinator_thread_key;
 extern mysql_pfs_key_t page_flush_thread_key;
-extern mysql_pfs_key_t recv_writer_thread_key;
 extern mysql_pfs_key_t srv_error_monitor_thread_key;
 extern mysql_pfs_key_t srv_lock_timeout_thread_key;
 extern mysql_pfs_key_t srv_master_thread_key;

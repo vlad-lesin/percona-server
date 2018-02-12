@@ -38,9 +38,14 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #include "univ.i"
 #include "ut0byte.h"
 
+#include <atomic>
+
 #ifndef UNIV_HOTBACKUP
 /** Flag indicating if the page_cleaner is in active state. */
 extern bool buf_page_cleaner_is_active;
+
+/** The number of running LRU manager threads. 0 if LRU manager is inactive. */
+extern std::atomic<ulint> buf_lru_manager_running_threads;
 
 #ifdef UNIV_DEBUG
 
