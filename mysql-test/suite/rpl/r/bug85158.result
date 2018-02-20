@@ -49,11 +49,21 @@ include/sync_slave_sql_with_master.inc
 ######
 include/assert.inc [No more than 5 writes should have happened to slave_master_info]
 ###
-# CLEANUP
+# CLEANUP FOR PFS ON 3
 ######
 UPDATE performance_schema.setup_objects
 SET enabled='no', timed='no'
   WHERE object_schema='mysql';
+###
+# CLEANUP DATA ON 1
+######
 [connection server_1]
 DROP TABLE t1;
+###
+# SYNC CLEANUP 1->2,2->3,1->3
+######
+include/sync_slave_sql_with_master.inc
+include/sync_slave_sql_with_master.inc
+[connection server_1]
+include/sync_slave_sql_with_master.inc
 include/rpl_end.inc
