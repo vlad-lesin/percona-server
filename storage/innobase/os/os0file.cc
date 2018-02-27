@@ -3140,10 +3140,7 @@ os_file_get_last_error_low(
 		}
 		break;
 	case EINTR:
-		if (srv_use_native_aio) {
-			return(OS_FILE_AIO_INTERRUPTED);
-		}
-		break;
+		return(OS_FILE_AIO_INTERRUPTED);
 	case EACCES:
 		return(OS_FILE_ACCESS_VIOLATION);
 	case ENAMETOOLONG:
