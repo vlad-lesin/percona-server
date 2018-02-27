@@ -79,7 +79,7 @@ typedef struct {
   void *free_func_arg;
   uint free_ptr_offset;
   std::atomic<uint64> pinstack_top_ver;    /* this is a versioned pointer */
-  std::atomicuint64> pins_in_array;        /* number of elements in array */
+  std::atomic<uint64> pins_in_array;       /* number of elements in array */
 } LF_PINBOX;
 
 typedef struct st_lf_pins {
