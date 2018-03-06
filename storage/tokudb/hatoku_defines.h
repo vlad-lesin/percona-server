@@ -26,18 +26,17 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #ifndef _HATOKU_DEFINES_H
 #define _HATOKU_DEFINES_H
 
-#include <my_config.h>
+#include "my_config.h"
 #define MYSQL_SERVER 1
 #include "mysql_version.h"
-#include "sql_table.h"
-#include "handler.h"
-#include "table.h"
-#include "log.h"
-#include "sql_class.h"
-#include "sql_show.h"
-#include "item_cmpfunc.h"
-#include <binlog.h>
-#include "debug_sync.h"
+#include "sql/sql_table.h"
+#include "sql/handler.h"
+#include "sql/table.h"
+#include "sql/sql_class.h"
+#include "sql/sql_show.h"
+#include "sql/item_cmpfunc.h"
+#include "sql/binlog.h"
+#include "sql/debug_sync.h"
 
 #undef PACKAGE
 #undef VERSION
@@ -50,7 +49,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #else
 #endif
 
-#include <mysql/plugin.h>
+#include "mysql/plugin.h"
 
 #include <ctype.h>
 #include <stdint.h>
