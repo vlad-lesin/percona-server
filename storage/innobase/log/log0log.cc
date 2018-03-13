@@ -2376,9 +2376,13 @@ loop:
 	/* At this point only page_cleaner should be active. We wait
 	here to let it complete the flushing of the buffer pools
 	before proceeding further. */
+	ut_ad(buf_lru_manager_running_threads == srv_buf_pool_instances
+	      || buf_lru_manager_running_threads == 0);
 	srv_shutdown_state = SRV_SHUTDOWN_FLUSH_PHASE;
 	count = 0;
-	while (buf_page_cleaner_is_active) {
+	while (buf_page_cleaner_is_active
+	       || buf_lru_manager_running_threads > 0) {
+
 		++count;
 		os_thread_sleep(100000);
 		if (srv_print_verbose_log && count > 600) {
