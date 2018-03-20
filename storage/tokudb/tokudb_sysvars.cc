@@ -49,34 +49,34 @@ const size_t error_buffer_max_size = 1024;
 ulonglong   cache_size = 0;
 uint        cachetable_pool_threads = 0;
 int         cardinality_scale_percent = 0;
-my_bool     checkpoint_on_flush_logs = FALSE;
+bool        checkpoint_on_flush_logs = FALSE;
 uint        checkpoint_pool_threads = 0;
 uint        checkpointing_period = 0;
 ulong       cleaner_iterations = 0;
 ulong       cleaner_period = 0;
 uint        client_pool_threads = 0;
-my_bool     compress_buffers_before_eviction = TRUE;
+bool        compress_buffers_before_eviction = TRUE;
 char*       data_dir = NULL;
 ulong       debug = 0;
 #if defined(TOKUDB_DEBUG) && TOKUDB_DEBUG
 // used to control background job manager
-my_bool     debug_pause_background_job_manager = FALSE;
+bool        debug_pause_background_job_manager = FALSE;
 #endif  // defined(TOKUDB_DEBUG) && TOKUDB_DEBUG
-my_bool     directio = FALSE;
-my_bool     enable_partial_eviction = TRUE;
+bool        directio = FALSE;
+bool        enable_partial_eviction = TRUE;
 // file system reserve as a percentage of total disk space
 int         fs_reserve_percent = 0;
 uint        fsync_log_period = 0;
 char*       log_dir = NULL;
 ulonglong   max_lock_memory = 0;
 uint        read_status_frequency = 0;
-my_bool     strip_frm_data = FALSE;
+bool        strip_frm_data = FALSE;
 char*       tmp_dir = NULL;
 uint        write_status_frequency = 0;
-my_bool     dir_per_db = TRUE;
+bool        dir_per_db = TRUE;
 char*       version = (char*) TOKUDB_VERSION_STR;
 
-my_bool        check_jemalloc = TRUE;
+bool        check_jemalloc = TRUE;
 
 static MYSQL_SYSVAR_ULONGLONG(
     cache_size,
@@ -268,8 +268,8 @@ static void enable_partial_eviction_update(
     TOKUDB_UNUSED(st_mysql_sys_var* sys_var),
     void* var,
     const void* save) {
-    my_bool* epe = (my_bool*)var;
-    *epe = *(const my_bool*)save;
+    bool* epe = (bool*)var;
+    *epe = *(const bool*)save;
     int r = db_env->evictor_set_enable_partial_eviction(db_env, *epe);
     assert(r == 0);
 }
@@ -393,8 +393,8 @@ static void tokudb_dir_per_db_update(
     TOKUDB_UNUSED(struct st_mysql_sys_var* sys_var),
     void* var,
     const void* save) {
-    my_bool *value = (my_bool *) var;
-    *value = *(const my_bool *) save;
+    bool *value = (bool *) var;
+    *value = *(const bool *) save;
     db_env->set_dir_per_db(db_env, *value);
 }
 
@@ -524,8 +524,8 @@ static void checkpoint_lock_update(TOKUDB_UNUSED(THD* thd),
                                    TOKUDB_UNUSED(st_mysql_sys_var* var),
                                    void* var_ptr,
                                    const void* save) {
-    my_bool* val = (my_bool*)var_ptr;
-    *val= *(my_bool*)save ? true : false;
+    bool* val = (bool*)var_ptr;
+    *val= *(bool*)save ? true : false;
     if (*val) {
         tokudb_checkpoint_lock(thd);
     } else {
@@ -852,7 +852,7 @@ static void support_xa_update(
     st_mysql_sys_var* var,
     void* var_ptr,
     const void* save) {
-    my_bool tokudb_support_xa = *static_cast<const my_bool*>(save);
+    bool tokudb_support_xa = *static_cast<const bool*>(save);
     push_warning(thd,
                  Sql_condition::SL_WARNING,
                  HA_ERR_WRONG_COMMAND,
@@ -1026,13 +1026,13 @@ st_mysql_sys_var* system_variables[] = {
     NULL
 };
 
-my_bool alter_print_error(THD* thd) {
+bool alter_print_error(THD* thd) {
     return (THDVAR(thd, alter_print_error) != 0);
 }
 double analyze_delete_fraction(THD* thd) {
     return THDVAR(thd, analyze_delete_fraction);
 }
-my_bool analyze_in_background(THD* thd) {
+bool analyze_in_background(THD* thd) {
     return (THDVAR(thd, analyze_in_background) != 0);
 }
 analyze_mode_t analyze_mode(THD* thd) {
@@ -1047,32 +1047,32 @@ ulonglong analyze_time(THD* thd) {
 ulonglong auto_analyze(THD* thd) {
     return THDVAR(thd, auto_analyze);
 }
-my_bool bulk_fetch(THD* thd) {
+bool bulk_fetch(THD* thd) {
     return (THDVAR(thd, bulk_fetch) != 0);
 }
 uint block_size(THD* thd) {
     return THDVAR(thd, block_size);
 }
-my_bool commit_sync(THD* thd) {
+bool commit_sync(THD* thd) {
     return (THDVAR(thd, commit_sync) != 0);
 }
-my_bool create_index_online(THD* thd) {
+bool create_index_online(THD* thd) {
     return (THDVAR(thd, create_index_online) != 0);
 }
-my_bool disable_hot_alter(THD* thd) {
+bool disable_hot_alter(THD* thd) {
     return (THDVAR(thd, disable_hot_alter) != 0);
 }
-my_bool disable_prefetching(THD* thd) {
+bool disable_prefetching(THD* thd) {
     return (THDVAR(thd, disable_prefetching) != 0);
 }
-my_bool disable_slow_alter(THD* thd) {
+bool disable_slow_alter(THD* thd) {
     return (THDVAR(thd, disable_slow_alter) != 0);
 }
 #if defined(TOKU_INCLUDE_UPSERT) && TOKU_INCLUDE_UPSERT
-my_bool enable_fast_update(THD* thd) {
+bool enable_fast_update(THD* thd) {
     return (THDVAR(thd, enable_fast_update) != 0);
 }
-my_bool enable_fast_upsert(THD* thd) {
+bool enable_fast_upsert(THD* thd) {
     return (THDVAR(thd, enable_fast_upsert) != 0);
 }
 #endif  // defined(TOKU_INCLUDE_UPSERT) && TOKU_INCLUDE_UPSERT
@@ -1082,7 +1082,7 @@ empty_scan_mode_t empty_scan(THD* thd) {
 uint fanout(THD* thd) {
     return THDVAR(thd, fanout);
 }
-my_bool hide_default_row_format(THD* thd) {
+bool hide_default_row_format(THD* thd) {
     return (THDVAR(thd, hide_default_row_format) != 0);
 }
 ulonglong killed_time(THD* thd) {
@@ -1094,7 +1094,7 @@ char* last_lock_timeout(THD* thd) {
 void set_last_lock_timeout(THD* thd, char* last) {
     THDVAR(thd, last_lock_timeout) = last;
 }
-my_bool load_save_space(THD* thd) {
+bool load_save_space(THD* thd) {
     return (THDVAR(thd, load_save_space) != 0);
 }
 ulonglong loader_memory_size(THD* thd) {
@@ -1115,7 +1115,7 @@ const char* optimize_index_name(THD* thd) {
 ulonglong optimize_throttle(THD* thd) {
     return THDVAR(thd, optimize_throttle);
 }
-my_bool prelock_empty(THD* thd) {
+bool prelock_empty(THD* thd) {
     return (THDVAR(thd, prelock_empty) != 0);
 }
 uint read_block_size(THD* thd) {
@@ -1128,26 +1128,26 @@ row_format_t row_format(THD *thd) {
     return (row_format_t) THDVAR(thd, row_format);
 }
 #if defined(TOKU_INCLUDE_RFR) && TOKU_INCLUDE_RFR
-my_bool rpl_check_readonly(THD* thd) {
+bool rpl_check_readonly(THD* thd) {
     return (THDVAR(thd, rpl_check_readonly) != 0);
 }
-my_bool rpl_lookup_rows(THD* thd) {
+bool rpl_lookup_rows(THD* thd) {
     return (THDVAR(thd, rpl_lookup_rows) != 0);
 }
 ulonglong rpl_lookup_rows_delay(THD* thd) {
     return THDVAR(thd, rpl_lookup_rows_delay);
 }
-my_bool rpl_unique_checks(THD* thd) {
+bool rpl_unique_checks(THD* thd) {
     return (THDVAR(thd, rpl_unique_checks) != 0);
 }
 ulonglong rpl_unique_checks_delay(THD* thd) {
     return THDVAR(thd, rpl_unique_checks_delay);
 }
 #endif // defined(TOKU_INCLUDE_RFR) && TOKU_INCLUDE_RFR
-my_bool support_xa(THD* thd) {
+bool support_xa(THD* thd) {
     return (THDVAR(thd, support_xa) != 0);
 }
-void set_support_xa(THD* thd, my_bool xa) {
+void set_support_xa(THD* thd, bool xa) {
     THDVAR(thd, support_xa) = xa;
 }
 } // namespace sysvars
