@@ -179,7 +179,7 @@ void toku_hton_assert_fail(
     abort();
 }
 
-//my_bool tokudb_shared_data = false;
+//bool tokudb_shared_data = false;
 static uint32_t tokudb_init_flags = 
     DB_CREATE | DB_THREAD | DB_PRIVATE | 
     DB_INIT_LOCK | 
