@@ -40,6 +40,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #include "sql/binlog.h"
 #include "sql/debug_sync.h"
 #include "sql/current_thd.h"
+#include "sql/mysqld.h"
 
 #include "mysql/components/my_service.h"
 #include "mysql/components/services/log_builtins.h"
