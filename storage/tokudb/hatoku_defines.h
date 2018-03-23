@@ -41,6 +41,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #include "sql/debug_sync.h"
 #include "sql/current_thd.h"
 #include "sql/mysqld.h"
+#include "sql/sql_thd_internal_api.h"
 #include "my_icp.h"
 
 #include "mysql/components/my_service.h"
