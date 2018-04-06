@@ -34,12 +34,12 @@
 #include <vector>
 
 /* MySQL includes */
-#include "debug_sync.h"
+#include "sql/debug_sync.h"
 #include "my_bit.h"
 #include "my_stacktrace.h"
 #include "my_sys.h"
-#include "sql_audit.h"
-#include "sql_table.h"
+#include "sql/sql_audit.h"
+#include "sql/sql_table.h"
 #include "mysql/thread_pool_priv.h"
 #include "mysys_err.h"
 

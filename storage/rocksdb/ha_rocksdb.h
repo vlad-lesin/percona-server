@@ -28,12 +28,12 @@
 #include <vector>
 
 /* MySQL header files */
-#include "handler.h"   /* handler */
-#include "my_global.h" /* ulonglong */
+#include "./sql/handler.h"   /* handler */
 #include "sql_string.h"
-#include "sql_bitmap.h"
+#include "ib_ut0counter.h"
+#include "sql/sql_bitmap.h"
 #include "my_icp.h"
-#include "field.h"
+#include "sql/field.h"
 
 /* RocksDB header files */
 #include "rocksdb/cache.h"
