@@ -18,3 +18,13 @@
 
 //#include "ha_tokudb.h"
 //#include "ha_tokupart.h"
+
+
+handler *ha_tokupart::get_file_handler(TABLE_SHARE *share,
+                                       MEM_ROOT *alloc,
+                                       handlerton *db_type) {
+  DBUG_ASSERT(db_type == tokudb_hton);
+  ha_tokudb *file = new(alloc) ha_tokudb(db_type, share);
+  file->init();
+  return file;
+}

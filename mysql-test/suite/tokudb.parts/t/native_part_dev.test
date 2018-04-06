@@ -1,0 +1,22 @@
+--source include/have_partition.inc
+--source include/have_tokudb.inc
+
+create table t2 (a int unsigned not null, primary key(a)) engine=tokudb;
+
+
+create table t1 (a int unsigned not null, primary key(a)) engine=tokudb
+PARTITION BY RANGE (a) (
+    PARTITION p0 VALUES LESS THAN (100),
+    PARTITION p1 VALUES LESS THAN (200),
+    PARTITION p2 VALUES LESS THAN (300),
+    PARTITION p3 VALUES LESS THAN (400)
+);
+#partition by key (a) (
+#partition pa1 max_rows=20 min_rows=2,
+#partition pa2 max_rows=30 min_rows=3,
+#partition pa3 max_rows=30 min_rows=4,
+#partition pa4 max_rows=40 min_rows=2);
+
+insert into t1 set a = 250;
+
+#drop table t1;
