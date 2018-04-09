@@ -35,6 +35,9 @@
 #include "my_icp.h"
 #include "sql/field.h"
 
+#define LOG_SUBSYSTEM_TAG "rocksdb"
+#include "mysql/components/services/log_builtins.h"
+
 /* RocksDB header files */
 #include "rocksdb/cache.h"
 #include "rocksdb/merge_operator.h"
@@ -767,8 +770,8 @@ public:
     int err MY_ATTRIBUTE((__unused__));
     err = finalize_bulk_load(false);
     if (err != 0) {
-      sql_print_error("RocksDB: Error %d finalizing bulk load while closing "
-                      "handler.",
+      LogPluginErrMsg(ERROR_LEVEL, 0,
+                      "Error %d finalizing bulk load while closing handler.",
                       err);
     }
   }
