@@ -5617,7 +5617,8 @@ void ha_rocksdb::set_use_read_free_rpl(const char *const whitelist) {
     HA_EXIT_SUCCESS  OK
     other            HA_ERR error code (can be SE-specific)
 */
-int ha_rocksdb::open(const char *const name, int mode, uint test_if_locked) {
+int ha_rocksdb::open(const char *const name, int mode, uint test_if_locked,
+                     const dd::Table *table_def MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   int err = close();
@@ -6533,7 +6534,8 @@ int rdb_split_normalized_tablename(const std::string &fullname,
 */
 
 int ha_rocksdb::create(const char *const name, TABLE *const table_arg,
-                       HA_CREATE_INFO *const create_info) {
+                       HA_CREATE_INFO *const create_info,
+                       dd::Table *table_def) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(table_arg != nullptr);
@@ -6577,7 +6579,7 @@ int ha_rocksdb::create(const char *const name, TABLE *const table_arg,
 
   if (get_table_if_exists(name)) {
     if (thd->lex->sql_command == SQLCOM_TRUNCATE) {
-      err = delete_table(name);
+      err = delete_table(name, table_def);
       if (err != HA_EXIT_SUCCESS) {
         DBUG_RETURN(err);
       }
@@ -9160,7 +9162,7 @@ int ha_rocksdb::index_end() {
     HA_EXIT_SUCCESS  OK
     other            HA_ERR error code (can be SE-specific)
 */
-int ha_rocksdb::truncate() {
+int ha_rocksdb::truncate(dd::Table *table_def MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(m_tbl_def != nullptr);
@@ -9916,7 +9918,9 @@ Rdb_tbl_def *ha_rocksdb::get_table_if_exists(const char *const tablename) {
     other            HA_ERR error code (can be SE-specific)
 */
 
-int ha_rocksdb::delete_table(const char *const tablename) {
+int ha_rocksdb::delete_table(const char *const tablename,
+                             const dd::Table *table_def
+                                 MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(tablename != nullptr);
@@ -10001,7 +10005,10 @@ int ha_rocksdb::remove_rows(Rdb_tbl_def *const tbl) {
     HA_EXIT_SUCCESS  OK
     other            HA_ERR error code (cannot be SE-specific)
 */
-int ha_rocksdb::rename_table(const char *const from, const char *const to) {
+int ha_rocksdb::rename_table(
+    const char *const from, const char *const to,
+    const dd::Table *from_table_def MY_ATTRIBUTE((__unused__)),
+    dd::Table *to_table_def MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(from != nullptr);
@@ -10617,7 +10624,7 @@ enum icp_result ha_rocksdb::check_index_cond() const {
 */
 
 my_core::enum_alter_inplace_result ha_rocksdb::check_if_supported_inplace_alter(
-    TABLE *altered_table, my_core::Alter_inplace_info *const ha_alter_info) {
+    TABLE *altered_table, my_core::Alter_inplace_info *ha_alter_info) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(ha_alter_info != nullptr);
@@ -10677,8 +10684,9 @@ my_core::enum_alter_inplace_result ha_rocksdb::check_if_supported_inplace_alter(
   @retval   false             Success
 */
 bool ha_rocksdb::prepare_inplace_alter_table(
-    TABLE *const altered_table,
-    my_core::Alter_inplace_info *const ha_alter_info) {
+    TABLE *altered_table, my_core::Alter_inplace_info *ha_alter_info,
+    const dd::Table *old_table_def MY_ATTRIBUTE((__unused__)),
+    dd::Table *new_table_def MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(altered_table != nullptr);
@@ -10825,8 +10833,9 @@ bool ha_rocksdb::prepare_inplace_alter_table(
   @retval   false             Success
 */
 bool ha_rocksdb::inplace_alter_table(
-    TABLE *const altered_table,
-    my_core::Alter_inplace_info *const ha_alter_info) {
+    TABLE *altered_table, my_core::Alter_inplace_info *ha_alter_info,
+    const dd::Table *old_table_def MY_ATTRIBUTE((__unused__)),
+    dd::Table *new_table_def MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(altered_table != nullptr);
@@ -11115,8 +11124,9 @@ int ha_rocksdb::inplace_populate_sk(
   @retval   false             Success
 */
 bool ha_rocksdb::commit_inplace_alter_table(
-    my_core::TABLE *const altered_table,
-    my_core::Alter_inplace_info *const ha_alter_info, bool commit) {
+    my_core::TABLE *altered_table, my_core::Alter_inplace_info *ha_alter_info,
+    bool commit, const dd::Table *old_table_def MY_ATTRIBUTE((__unused__)),
+    dd::Table *new_table_def MY_ATTRIBUTE((__unused__))) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(altered_table != nullptr);
