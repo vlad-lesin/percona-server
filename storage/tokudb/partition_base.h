@@ -1,5 +1,5 @@
-#ifndef HA_PARTITION_BASE
-#define HA_PARTITION_BASE
+#ifndef PARTITION_BASE_INCLUDED
+#define PARTITION_BASE_INCLUDED
 
 /*
    Copyright (c) 2005, 2017, Oracle and/or its affiliates. All rights reserved.
@@ -51,290 +51,14 @@ class Partition_base :
 	public Partition_handler
 {
 public:
-
-  Partition_base(handlerton *hton, TABLE_SHARE *share);
-  Partition_base(handlerton *hton, TABLE_SHARE *share,
-                 partition_info *part_info_arg,
-                 Partition_base *clone_arg,
-                  MEM_ROOT *clone_mem_root_arg);
-
-  ~Partition_base();
   bool init_partitioning(MEM_ROOT *mem_root) {
     return Partition_helper::init_partitioning(mem_root);
   }
 
 private:
-
-  int rnd_init(bool scan) {
-    return HA_ERR_UNSUPPORTED;
-  }
-  int rnd_end() {
-    return HA_ERR_UNSUPPORTED;
-  }
-  int rnd_next(uchar *buf) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  int rnd_pos(uchar*, uchar*) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  void position(const uchar*) {
-    return;
-  }
-
-  const char* table_type() const;
-
-  const char** bas_ext() const {
-    return nullptr;
-  }
-
-  ulong index_flags(uint, uint, bool) const {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Write a row in partition.
-    Stores a row in an TokuDB database, to the table specified in this
-    handle.
-    @param[in] part_id Partition to write to.
-    @param[in] record a row in MySQL format.
-    @return	0 or error code. */
-  int write_row_in_part(uint part_id, uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Update a row in partition.
-  Updates a row given as a parameter to a new value.
-  @param[in] part_id Partition to update row in.
-  @param[in] old_row Old row in MySQL format.
-  @param[in] new_row New row in MySQL format.
-  @return error number or 0. */
-  int update_row_in_part(uint part_id, const uchar* old_row, uchar* new_row) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Deletes a row in partition.
-  @param[in] part_id Partition to delete from.
-  @param[in] row Row to delete in MySQL format.
-  @return error number or 0. */
-  int delete_row_in_part(uint part_id, const uchar* row) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Set the autoinc column max value.
-  This should only be called once from ha_tokudb::open().
-  Therefore there's no need for a covering lock.
-  @param[in] no_lock If locking should be skipped. Not used!
-  @return 0 on success else error code. */
-  int initialize_auto_increment(bool /* no_lock */) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Initialize random read/scan of a specific partition.
-  @param[in] part_id    Partition to initialize.
-  @param[in] table_scan True for scan else random access.
-  @return error number or 0. */
-  int rnd_init_in_part(uint part_id, bool table_scan) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Get next row during scan of a specific partition.
-  @param[in] part_id Partition to read from.
-  @param[out] record Next row.
-  @return error number or 0. */
-  int rnd_next_in_part(uint part_id, uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** End random read/scan of a specific partition.
-  @param[in] part_id    Partition to end random read/scan.
-  @param[in] table_scan True for scan else random access.
-  @return error number or 0. */
-  int rnd_end_in_part(uint part_id, bool table_scan) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Get a reference to the current cursor position in the last used
-  partition.
-  @param[out] ref Reference (PK if exists else row_id).
-  @param[in]  record Record to position. */
-  void position_in_last_part(uchar* ref, const uchar* record) {
-      return;
-  }
-
-  /** Return first record in index from a partition.
-  @param[in]  part    Partition to read from.
-  @param[out] record  First record in index in the partition.
-  @return error number or 0. */
-  int index_first_in_part(uint part, uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Return last record in index from a partition.
-  @param[in]  part    Partition to read from.
-  @param[out] record  Last record in index in the partition.
-  @return error number or 0. */
-  int index_last_in_part(uint part,uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Return previous record in index from a partition.
-  @param[in]  part   Partition to read from.
-  @param[out] record Last record in index in the partition.
-  @return error number or 0. */
-  int index_prev_in_part(uint part,uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Return next record in index from a partition.
-  @param[in]  part   Partition to read from.
-  @param[out] record Last record in index in the partition.
-  @return error number or 0. */
-  int index_next_in_part(uint part,uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Return next same record in index from a partition.
-  This routine is used to read the next record, but only if the key is
-  the same as supplied in the call.
-  @param[in]  part    Partition to read from.
-  @param[out] record  Last record in index in the partition.
-  @param[in]  key     Key to match.
-  @param[in]  length  Length of key.
-  @return error number or 0. */
-  int index_next_same_in_part(
-    uint part, uchar* record, const uchar* key, uint length) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Start index scan and return first record from a partition.
-  This routine starts an index scan using a start key. The calling
-  function will check the end key on its own.
-  @param[in]  part        Partition to read from.
-  @param[out] record      First matching record in index in the partition.
-  @param[in]  key         Key to match.
-  @param[in]  keypart_map Which part of the key to use.
-  @param[in]  find_flag   Key condition/direction to use.
-  @return error number or 0. */
-  int index_read_map_in_part(uint part,
-                             uchar* record,
-                             const uchar* key,
-                             key_part_map keypart_map,
-                             enum ha_rkey_function	find_flag) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Return last matching record in index from a partition.
-  @param[in]  part        Partition to read from.
-  @param[out] record      Last matching record in index in the partition.
-  @param[in]  key         Key to match.
-  @param[in]  keypart_map Which part of the key to use.
-  @return error number or 0. */
-  int index_read_last_map_in_part(uint part,
-                                  uchar* record,
-                                  const uchar* key,
-                                  key_part_map keypart_map) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Start index scan and return first record from a partition.
-  This routine starts an index scan using a start and end key.
-  @param[in]  part      Partition to read from.
-  @param[out] record    First matching record in index in the partition.
-  if NULL use table->record[0] as return buffer.
-  @param[in]  start_key Start key to match.
-  @param[in]  end_key   End key to match.
-  @param[in]  eq_range  Is equal range, start_key == end_key.
-  @param[in]  sorted    Return rows in sorted order.
-  @return error number or 0. */
-  int read_range_first_in_part(uint part,
-                               uchar* record,
-                               const key_range* start_key,
-                               const key_range* end_key,
-                               bool eq_range,
-                               bool sorted) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Return next record in index range scan from a partition.
-  @param[in]  part   Partition to read from.
-  @param[out] record First matching record in index in the partition.
-  if NULL use table->record[0] as return buffer.
-  @return error number or 0. */
-  int read_range_next_in_part(uint part, uchar* record) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Start index scan and return first record from a partition.
-  This routine starts an index scan using a start key. The calling
-  function will check the end key on its own.
-  @param[in]  part        Partition to read from.
-  @param[out] record      First matching record in index in the partition.
-  @param[in]  index       Index to read from.
-  @param[in]  key         Key to match.
-  @param[in]  keypart_map Which part of the key to use.
-  @param[in]  find_flag   Key condition/direction to use.
-  @return error number or 0. */
-  int index_read_idx_map_in_part(uint part,
-                                 uchar* record,
-                                 uint index,
-                                 const uchar* key,
-                                 key_part_map keypart_map,
-                                 enum ha_rkey_function find_flag) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Prepare for creating new partitions during ALTER TABLE ...
-  PARTITION.
-  @param[in]  num_partitions  Number of new partitions to be created.
-  @param[in]  only_create     True if only creating the partition
-  (no open/lock is needed).
-  @return 0 for success else error code. */
-  int prepare_for_new_partitions(uint num_partitions, bool only_create) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Create a new partition to be filled during ALTER TABLE ...
-  PARTITION.
-  @param[in]  table       Table to create the partition in.
-  @param[in]  create_info Table/partition specific create info.
-  @param[in]  part_name   Partition name.
-  @param[in]  new_part_id Partition id in new table.
-  @param[in]  part_elem   Partition element.
-  @return 0 for success else error code. */
-  int create_new_partition(TABLE* table,
-                           HA_CREATE_INFO* create_info,
-                           const char* part_name,
-                           uint new_part_id,
-                           partition_element* part_elem) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-  /** Close and finalize new partitions. */
-  void close_new_partitions() {
-    return;
-  }
-
-  /** write row to new partition.
-  @param[in]  new_part  New partition to write to.
-  @return 0 for success else error code. */
-  int write_row_in_new_part(uint new_part) {
-    return HA_ERR_UNSUPPORTED;
-  }
-
-
-  /** Implementing something new
-  @{ */
-public:
-  bool create_handlers(MEM_ROOT *mem_root);
-
-private:
   virtual handler *get_file_handler(TABLE_SHARE *share,
                                     MEM_ROOT *alloc,
                                     handlerton *db_type) = 0;
-
-
-  /** @} */
 
 private:
   /* Data for the partition handler */
@@ -373,7 +97,7 @@ private:
   /** cached value of indexes_are_disabled(). */
   int m_indexes_are_disabled;
   /*
-    If set, this object was created with ha_partition::clone and doesn't
+    If set, this object was created with Partition_base::clone and doesn't
     "own" the m_part_info structure.
   */
   Partition_base *m_is_clone_of;
@@ -431,9 +155,8 @@ private:
                                        const uint32 *b);
   /** keep track of partitions to call ha_reset */
   MY_BITMAP m_partitions_to_reset;
-#if 0
 public:
-  handler *clone(const char *name, MEM_ROOT *mem_root);
+  virtual handler *clone(const char *name, MEM_ROOT *mem_root) = 0;
   /*
     -------------------------------------------------------------------------
     MODULE create/delete handler object
@@ -445,14 +168,13 @@ public:
     partition handler.
     -------------------------------------------------------------------------
   */
-    ha_partition(handlerton *hton, TABLE_SHARE * table) {}
-    ha_partition(handlerton *hton, TABLE_SHARE *share,
+    Partition_base(handlerton *hton, TABLE_SHARE * table);
+    Partition_base(handlerton *hton, TABLE_SHARE *share,
                  partition_info *part_info_arg,
-                 ha_partition *clone_arg,
-                 MEM_ROOT *clone_mem_root_arg) {}
-   ~ha_partition() {}
+                 Partition_base *clone_arg,
+                 MEM_ROOT *clone_mem_root_arg);
+   ~Partition_base();
    bool init_with_fields();
-#endif // 0
   /*
     A partition handler has no characteristics in itself. It only inherits
     those from the underlying handlers. Here we set-up those constants to
@@ -460,7 +182,6 @@ public:
     lying handlers. Returns false if not successful.
   */
   bool initialize_partition(MEM_ROOT *mem_root);
-#if 0
   /*
     -------------------------------------------------------------------------
     MODULE meta data changes
@@ -475,13 +196,8 @@ public:
   */
   virtual int delete_table(const char *from);
   virtual int rename_table(const char *from, const char *to);
-#endif // 0
   virtual int create(const char *name, TABLE *form,
                      HA_CREATE_INFO *create_info);
-#if 0
-  virtual int create_handler_files(const char *name,
-                                   const char *old_name, int action_flag,
-                                   HA_CREATE_INFO *create_info);
   virtual void update_create_info(HA_CREATE_INFO *create_info);
   int change_partitions_low(HA_CREATE_INFO *create_info,
                             const char *path,
@@ -505,7 +221,7 @@ public:
 private:
   bool get_num_parts(const char *name, uint *num_parts)
   {
-    DBUG_ENTER("ha_partition::get_num_parts");
+    DBUG_ENTER("Partition_base::get_num_parts");
     *num_parts= m_tot_parts;
     DBUG_RETURN(0);
   }
@@ -531,24 +247,16 @@ private:
     underlying partitions, their engine and the number of partitions.
     And one method to read it in.
   */
-  bool create_handler_file(const char *name);
   bool setup_engine_array(MEM_ROOT *mem_root);
-#endif //0
   bool new_handlers_from_part_info(MEM_ROOT *mem_root);
-#if 0
   bool create_handlers(MEM_ROOT *mem_root);
-#endif //0
 //  void clear_handler_file();
-#if 0
   partition_element *find_partition_element(uint part_id);
   bool populate_partition_name_hash();
-#endif // 0
   Partition_base_share *get_share();
   bool set_ha_share_ref(Handler_share **ha_share);
   bool init_part_share();
-#if 0
   void fix_data_dir(char* path);
-#endif // 0
   bool init_partition_bitmaps();
   void free_partition_bitmaps();
 public:
@@ -608,10 +316,9 @@ public:
   */
   virtual void try_semi_consistent_read(bool);
 
-#if 0
   /*
     NOTE: due to performance and resource issues with many partitions,
-    we only use the m_psi on the ha_partition handler, excluding all
+    we only use the m_psi on the Partition_base handler, excluding all
     partitions m_psi.
   */
 #ifdef HAVE_M_PSI_PER_PARTITION
@@ -871,7 +578,6 @@ public:
   }
   bool has_gap_locks() const;
 
-#endif // 0
 public:
   /*
     -------------------------------------------------------------------------
@@ -886,7 +592,6 @@ public:
   void get_dynamic_partition_info(ha_statistics *stat_info,
                                   ha_checksum *check_sum,
                                   uint part_id);
-#if 0
   virtual int extra(enum ha_extra_function operation);
   virtual int extra_opt(enum ha_extra_function operation, ulong cachesize);
   virtual int reset(void);
@@ -1005,7 +710,6 @@ public:
   */
   virtual void print_error(int error, myf errflag);
   virtual bool get_error_message(int error, String * buf);
-#endif //0
   /*
    -------------------------------------------------------------------------
     MODULE handler characteristics
@@ -1138,7 +842,6 @@ public:
     until further investigated.
   */
   virtual Table_flags table_flags() const;
-#if 0
   /*
     This is a bitmap of flags that says how the storage engine
     implements indexes. The current index flags are documented in
@@ -1462,7 +1165,6 @@ public:
     MODULE partitioning specific handler API
     -------------------------------------------------------------------------
   */
-#endif //0
   handler *get_handler()
   {
     return static_cast<handler*>(this);
@@ -1480,7 +1182,6 @@ public:
     return (HA_PARTITION_FUNCTION_SUPPORTED |
             HA_FAST_CHANGE_PARTITION);
   }
-#if 0
 private:
   /* private support functions for Partition_helper: */
   int write_row_in_part(uint part_id, uchar *buf);
@@ -1529,7 +1230,6 @@ private:
     Access methods to protected areas in handler to avoid adding
     friend class Partition_helper in class handler.
   */
-#endif //0
   THD *get_thd() const
   {
     return ha_thd();
@@ -1552,4 +1252,4 @@ private:
   }
 };
 
-#endif /* HA_PARTITION_INCLUDED */
+#endif /* PARTITION_BASE_INCLUDED */

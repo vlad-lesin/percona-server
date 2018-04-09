@@ -694,6 +694,7 @@ static handler* tokudb_create_handler(
     handlerton* hton,
     TABLE_SHARE* table,
     MEM_ROOT* mem_root) {
+
     if (table && table->db_type() == tokudb_hton &&
         table->partition_info_str && table->partition_info_str_len) {
         ha_tokupart* file = new (mem_root) ha_tokupart(hton, table);
@@ -704,6 +705,7 @@ static handler* tokudb_create_handler(
         }
         return(file);
     }
+
     return new(mem_root) ha_tokudb(hton, table);
 }
 

@@ -18,5 +18,20 @@ PARTITION BY RANGE (a) (
 #partition pa4 max_rows=40 min_rows=2);
 
 insert into t1 set a = 250;
+insert into t1 set a = 255;
+insert into t1 set a = 350;
+insert into t1 set a = 355;
+insert into t1 set a = 50;
+insert into t1 set a = 55;
+
+
+select * from t1;
+select * from t1 where a = 355;
+
+update t1 set a = 10 where a = 355;
+select * from t1;
+
+update t1 set a = a + 1;
+select * from t1;
 
 #drop table t1;

@@ -24,6 +24,8 @@ private:
   virtual handler *get_file_handler(TABLE_SHARE *share,
                                     MEM_ROOT *alloc,
                                     handlerton *db_type);
+  virtual handler *clone(const char *name, MEM_ROOT *mem_root);
+  virtual ulong index_flags(uint inx, uint part, bool all_parts) const;
 };
 
 #endif // _HA_TOKUPART_H
