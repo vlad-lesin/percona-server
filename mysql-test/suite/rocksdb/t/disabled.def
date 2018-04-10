@@ -8,4 +8,6 @@ rpl_read_free : MYR-6 - Percona Server does not yet have uniform implementation 
 slow_query_log : MYR-26 - Percona Server does not support --log-slow-extra
 
 # 8.0
+nonflushing_analyze_debug : PS-4223 - Remove ONLINE_ANALYZE until such time it is ported to 8.0
+nonflushing_analyze_parts_debug : PS-4223 - Remove ONLINE_ANALYZE until such time it is ported to 8.0
 validate_datadic : PS-4218 - Make .frm/schema validation optional at compile time
