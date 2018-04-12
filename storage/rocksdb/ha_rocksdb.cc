@@ -42,6 +42,7 @@
 #include "sql/sql_table.h"
 #include "mysql/thread_pool_priv.h"
 #include "mysys_err.h"
+#include "sql/mysqld.h"
 
 // Both MySQL and RocksDB define the same constant. To avoid compilation errors
 // till we make the fix in RocksDB, we'll temporary undefine it here.
