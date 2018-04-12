@@ -813,7 +813,8 @@ public:
                 HA_PARTIAL_COLUMN_READ);
   }
 
-  bool init_with_fields() override;
+//  bool init_with_fields() override;
+  bool init_with_fields();
 
   /** @brief
     This is a bitmap of flags that indicates how the storage engine
@@ -827,7 +828,7 @@ public:
   */
   ulong index_flags(uint inx, uint part, bool all_parts) const override;
 
-  bool rpl_can_handle_stm_event() const override;
+//  bool rpl_can_handle_stm_event() const override;
 
   bool primary_key_is_clustered() const override {
     DBUG_ENTER_FUNC();
