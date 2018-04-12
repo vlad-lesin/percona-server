@@ -19,7 +19,7 @@
 #endif
 
 #define MYSQL_SERVER 1
-#define ROCKSDB_INCLUDE_RFR 1
+#define ROCKSDB_INCLUDE_RFR 0
 
 /* The C++ file's header */
 #include "./ha_rocksdb.h"
