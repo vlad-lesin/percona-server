@@ -37,6 +37,7 @@
 #include "m_ctype.h"
 #include "my_bit.h"
 #include "my_bitmap.h"
+#include "m_ctype.h"
 #include "sql/sql_table.h"
 #include "my_stacktrace.h"
 #include "sql/mysqld.h"
@@ -46,6 +47,10 @@
 #include "./rdb_cf_manager.h"
 #include "./rdb_psi.h"
 #include "./rdb_utils.h"
+
+extern CHARSET_INFO my_charset_utf16_bin;
+extern CHARSET_INFO my_charset_utf16le_bin;
+extern CHARSET_INFO my_charset_utf32_bin;
 
 namespace myrocks {
 
@@ -3257,7 +3262,10 @@ bool Rdb_field_packing::setup(const Rdb_key_def *const key_descr,
         // either.
         // Currently we handle these collations as NO_PAD, even if they have
         // PAD_SPACE attribute.
-        if (cs->levels_for_order == 1) {
+        // 8.0 removes levels_for_order but leaves levels_for_compare which
+        // seems to be identical in value and extremely similar in
+        // purpose/indication for our needs here.
+        if (cs->levels_for_compare == 1) {
           m_pack_func = &Rdb_key_def::pack_with_varchar_space_pad;
           m_skip_func = &Rdb_key_def::skip_variable_space_pad;
           m_segment_size = get_segment_size_from_collation(cs);
