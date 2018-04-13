@@ -1,0 +1,1 @@
+rpl_rocksdb_snapshot : LOCK BINLOG FOR BACKUP
