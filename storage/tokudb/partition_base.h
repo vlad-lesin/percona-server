@@ -18,6 +18,7 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include "partitioning/partition_handler.h"  /* Partition_handler */
+#include "item.h" // enum_monotonicity_info
 
 /** class where to save partitions Handler_share's */
 class Parts_share_refs
@@ -171,7 +172,8 @@ public:
                  Partition_base *clone_arg,
                  MEM_ROOT *clone_mem_root_arg);
    ~Partition_base();
-   bool init_with_fields();
+   // TODO: check if the function is necessary
+//   bool init_with_fields();
   /*
     A partition handler has no characteristics in itself. It only inherits
     those from the underlying handlers. Here we set-up those constants to
@@ -191,11 +193,17 @@ public:
     object needed in opening the object in openfrm
     -------------------------------------------------------------------------
   */
-  virtual int delete_table(const char *from);
-  virtual int rename_table(const char *from, const char *to);
-  virtual int create(const char *name, TABLE *form,
-                     HA_CREATE_INFO *create_info);
+//  virtual int delete_table(const char *from);
+  virtual int delete_table(const char*, const dd::Table*); // TODO: NYI
+//  virtual int rename_table(const char *from, const char *to);
+  virtual int rename_table(
+    const char*, const char*, const dd::Table*, dd::Table*); // TODO: NYI
+//  virtual int create(const char *name, TABLE *form,
+//                     HA_CREATE_INFO *create_info);
+  virtual int create(
+    const char*, TABLE*, HA_CREATE_INFO*, dd::Table*); // TODO: NYI
   virtual void update_create_info(HA_CREATE_INFO *create_info);
+/*
   int change_partitions_low(HA_CREATE_INFO *create_info,
                             const char *path,
                             ulonglong * const copied,
@@ -206,7 +214,11 @@ public:
                                                copied,
                                                deleted);
   }
-
+*/
+  int change_partitions_low(
+    HA_CREATE_INFO*, const char*, ulonglong*, ulonglong*) {
+    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+  }
   /** This function reads zip dict-related info from partition handlers.
   It may do nothing if individual handlers do not support COMPRESSED_COLUMNS.
 
@@ -216,7 +228,7 @@ public:
   virtual void update_field_defs_with_zip_dict_info(THD* thd,
                                                     const char* part_name);
 private:
-  bool get_num_parts(const char *name, uint *num_parts)
+  bool get_num_parts(const char * /*name*/, uint *num_parts)
   {
     DBUG_ENTER("Partition_base::get_num_parts");
     *num_parts= m_tot_parts;
@@ -229,20 +241,22 @@ private:
   virtual void change_table_ptr(TABLE *table_arg, TABLE_SHARE *share);
   virtual bool check_if_incompatible_data(HA_CREATE_INFO *create_info,
                                           uint table_changes);
-  int prepare_for_new_partitions(uint num_partitions,
-                                 bool only_create);
-  int create_new_partition(TABLE *table,
-                           HA_CREATE_INFO *create_info,
-                           const char *part_name,
-                           uint new_part_id,
-                           partition_element *p_elem);
+  int prepare_for_new_partitions(uint num_partitions);//,
+//                                 bool only_create);
+// TODO: check if the function is necessary
+//  int create_new_partition(TABLE *table,
+//                           HA_CREATE_INFO *create_info,
+//                           const char *part_name,
+//                           uint new_part_id,
+//                           partition_element *p_elem);
   int write_row_in_new_part(uint part_id);
   void close_new_partitions();
   /*
     delete_table and rename_table uses very similar logic which
     is packed into this routine.
   */
-  int del_ren_table(const char *from, const char *to);
+  int del_ren_table(const char *from, const char *to,
+    const dd::Table *table_def_from, dd::Table *table_def_to);
   /*
     One method to create the table_name.par file containing the names of the
     underlying partitions, their engine and the number of partitions.
@@ -274,7 +288,8 @@ public:
     being used for normal queries (not before meta-data changes always.
     If the object was opened it will also be closed before being deleted.
   */
-  virtual int open(const char *name, int mode, uint test_if_locked);
+//  virtual int open(const char *name, int mode, uint test_if_locked);
+  virtual int open(const char*, int, uint, const dd::Table*); // TODO: NYI
   virtual int close(void);
 
   /*
@@ -362,7 +377,8 @@ public:
     return Partition_helper::ph_delete_row(buf, rpl_lookup_rows());
   }
   virtual int delete_all_rows(void);
-  virtual int truncate();
+//  virtual int truncate();
+  virtual int truncate(dd::Table*); // TODO: NYI
   virtual void start_bulk_insert(ha_rows rows);
   virtual int end_bulk_insert();
 private:
@@ -378,7 +394,8 @@ public:
     @remark This method is a partitioning-specific hook
             and thus not a member of the general SE API.
   */
-  int truncate_partition_low();
+//  int truncate_partition_low();
+  int truncate_partition_low(dd::Table*); // TODO: NYI
 
   virtual bool is_ignorable_error(int error)
   {
@@ -427,9 +444,10 @@ public:
   {
     return Partition_helper::ph_rnd_next(buf);
   }
-  int rnd_pos(uchar *buf, uchar *pos)
+  int rnd_pos(uchar * /*buf*/, uchar * /*pos*/)
   {
-    return Partition_helper::ph_rnd_pos(buf, pos);
+    //return Partition_helper::ph_rnd_pos(buf, pos);
+    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   int rnd_pos_by_record(uchar *record)
   {
@@ -488,13 +506,15 @@ public:
                                                keypart_map,
                                                find_flag);
   }
-  virtual int index_init(uint idx, bool sorted)
+  virtual int index_init(uint /*idx*/, bool /*sorted*/)
   {
-    return Partition_helper::ph_index_init(idx, sorted);
+//    return Partition_helper::ph_index_init(idx, sorted);
+    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   virtual int index_end()
   {
-    return Partition_helper::ph_index_end();
+//    return Partition_helper::ph_index_end();
+    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
 
   /**
@@ -535,9 +555,10 @@ public:
   {
     return Partition_helper::ph_index_last(buf);
   }
-  int index_next_same(uchar *buf, const uchar *key, uint keylen)
+  int index_next_same(uchar * /*buf*/, const uchar * /*key*/, uint  /*keylen*/)
   {
-    return Partition_helper::ph_index_next_same(buf, key, keylen);
+//    return Partition_helper::ph_index_next_same(buf, key, keylen);
+    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   int index_read_last_map(uchar *buf,
                           const uchar *key,
@@ -598,8 +619,8 @@ public:
     Do not allow caching of partitioned tables, since we cannot return
     a callback or engine_data that would work for a generic engine.
   */
-  virtual my_bool register_query_cache_table(THD *thd, char *table_key,
-                                             size_t key_length,
+  virtual bool register_query_cache_table(THD * /*thd*/, char * /*table_key*/,
+                                             size_t /*key_length*/,
                                              qc_engine_callback
                                                *engine_callback,
                                              ulonglong *engine_data)
@@ -646,7 +667,7 @@ public:
     index-only scanning when performing an ORDER BY query.
     Only called from one place in sql_select.cc
   */
-  virtual const key_map *keys_to_use_for_scanning();
+  virtual const Key_map *keys_to_use_for_scanning();
 
   /*
     Called in test_quick_select to determine if indexes should be used.
@@ -891,7 +912,7 @@ public:
     HA_KEYREAD_ONLY:
     Does the storage engine support index-only scans on this index.
     Enables use of HA_EXTRA_KEYREAD and HA_EXTRA_NO_KEYREAD
-    Used to set key_map keys_for_keyread and to check in optimiser for
+    Used to set Key_map keys_for_keyread and to check in optimiser for
     index-only scans.  When doing a read under HA_EXTRA_KEYREAD the handler
     only have to fill in the columns the key covers. If
     HA_PRIMARY_KEY_IN_READ_INDEX is set then also the PRIMARY KEY columns
@@ -951,7 +972,7 @@ public:
     to check whether the rest of the reference part is also the same.
     -------------------------------------------------------------------------
   */
-  virtual int cmp_ref(const uchar * ref1, const uchar * ref2);
+  virtual int cmp_ref(const uchar * ref1, const uchar * ref2) const;
 
   /*
     -------------------------------------------------------------------------
@@ -1062,21 +1083,30 @@ public:
     virtual enum_alter_inplace_result
       check_if_supported_inplace_alter(TABLE *altered_table,
                                        Alter_inplace_info *ha_alter_info);
-    virtual bool prepare_inplace_alter_table(TABLE *altered_table,
-                                             Alter_inplace_info *ha_alter_info);
-    virtual bool inplace_alter_table(TABLE *altered_table,
-                                     Alter_inplace_info *ha_alter_info);
-    virtual bool commit_inplace_alter_table(TABLE *altered_table,
-                                            Alter_inplace_info *ha_alter_info,
-                                            bool commit);
-    virtual void notify_table_changed();
+//    virtual bool prepare_inplace_alter_table(TABLE *altered_table,
+//                                             Alter_inplace_info *ha_alter_info);
+    virtual bool prepare_inplace_alter_table(
+      TABLE*, Alter_inplace_info*, const dd::Table*, dd::Table*); // TODO: NYI
+//    virtual bool inplace_alter_table(TABLE *altered_table,
+//                                     Alter_inplace_info *ha_alter_info);
+    virtual bool inplace_alter_table(
+      TABLE*, Alter_inplace_info*, const dd::Table*, dd::Table*); // TODO: NYI
+//    virtual bool commit_inplace_alter_table(TABLE *altered_table,
+//                                            Alter_inplace_info *ha_alter_info,
+//                                            bool commit);
+    virtual bool commit_inplace_alter_table(
+      TABLE*, Alter_inplace_info*,
+      bool, const dd::Table*, dd::Table*); // TODO: NYI
+//    virtual void notify_table_changed();
+    virtual void notify_table_changed(Alter_inplace_info*); //TODO: NYI
 
   /*
     -------------------------------------------------------------------------
     MODULE tablespace support
     -------------------------------------------------------------------------
   */
-    virtual int discard_or_import_tablespace(my_bool discard);
+//    virtual int discard_or_import_tablespace(bool discard);
+    virtual int discard_or_import_tablespace(bool, dd::Table*); // TODO: NYI
 
   /*
     -------------------------------------------------------------------------
@@ -1119,7 +1149,8 @@ public:
   */
   ha_checksum checksum() const
   {
-    return Partition_helper::ph_checksum();
+//    return Partition_helper::ph_checksum();
+    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   /* Enabled keycache for performance reasons, WL#4571 */
     virtual int assign_to_keycache(THD* thd, HA_CHECK_OPT *check_opt);
@@ -1175,8 +1206,8 @@ public:
   }
   uint alter_flags(uint flags MY_ATTRIBUTE((unused))) const
   {
-    return (HA_PARTITION_FUNCTION_SUPPORTED |
-            HA_FAST_CHANGE_PARTITION);
+    return(HA_PARTITION_FUNCTION_SUPPORTED
+           | HA_INPLACE_CHANGE_PARTITION);
   }
 
 private:

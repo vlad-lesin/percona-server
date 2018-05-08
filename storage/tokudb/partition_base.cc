@@ -54,6 +54,8 @@
   MYSQL_SERVER define is set!
 */
 #define MYSQL_SERVER 1
+#define LOG_SUBSYSTEM_TAG "partition_base"
+
 #include "sql_parse.h"                          // append_file_to_dir
 #include "partition_info.h"                  // partition_info
 #include "partition_base.h"
@@ -66,8 +68,7 @@
 #include "sql_admin.h"                       // SQL_ADMIN_MSG_TEXT_SIZE
 #include "myisam.h"                          // TT_FOR_UPGRADE
 #include "sql_plugin.h"                      // plugin_unlock_list
-#include "log.h"                             // sql_print_error
-
+#include "mysql/components/services/log_builtins.h" // print error messages
 
 #include <vector>
 #include <string>
@@ -80,6 +81,7 @@
 
 #include "pfs_file_provider.h"
 #include "mysql/psi/mysql_file.h"
+
 
 using std::min;
 using std::max;
@@ -108,7 +110,8 @@ static const char *opt_op_name[]= {"optimize", "analyze", "check", "repair",
 ****************************************************************************/
 
 static PSI_memory_key key_memory_Partition_base_engine_array;
-static PSI_memory_key key_memory_Partition_base_part_ids;
+// TODO: uncomment or delete if necessary
+//static PSI_memory_key key_memory_Partition_base_part_ids;
 PSI_file_key key_file_Partition_base_par;
 
 void part_name(char *out_buf,
@@ -138,7 +141,7 @@ void part_name(char *out_buf,
     part_name_length += subpart_name_length;
   }
 
-  create_partition_name(out_buf, path, part_name, NORMAL_PART_NAME, FALSE);
+  create_partition_name(out_buf, path, part_name, FALSE);
 }
 
 Parts_share_refs::Parts_share_refs()
@@ -341,6 +344,8 @@ Partition_base::~Partition_base()
   DBUG_VOID_RETURN;
 }
 
+// TODO: check if the function is necessary
+#if 0
 bool Partition_base::init_with_fields()
 {
   /* Partition info has not yet been initialized, just return true */
@@ -358,6 +363,7 @@ bool Partition_base::init_with_fields()
                       PARTITION_ENABLED_TABLE_FLAGS;
   return false;
 }
+#endif
 
 template<typename Fn>
 bool Partition_base::foreach_partition(const Fn& fn) {
@@ -516,12 +522,19 @@ bool Partition_base::initialize_partition(MEM_ROOT *mem_root)
     the storage engine.
 */
 
+int Partition_base::delete_table(const char*, const dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
 int Partition_base::delete_table(const char *name)
 {
   DBUG_ENTER("Partition_base::delete_table");
 
   DBUG_RETURN(del_ren_table(name, NULL));
 }
+#endif
 
 
 /*
@@ -546,12 +559,20 @@ int Partition_base::delete_table(const char *name)
     Called from sql_table.cc by mysql_rename_table().
 */
 
+int Partition_base::rename_table(
+  const char*, const char*, const dd::Table*, dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
 int Partition_base::rename_table(const char *from, const char *to)
 {
   DBUG_ENTER("Partition_base::rename_table");
 
   DBUG_RETURN(del_ren_table(from, to));
 }
+#endif
 
 
 /*
@@ -578,6 +599,12 @@ int Partition_base::rename_table(const char *from, const char *to)
     Called from handler.cc by ha_create_table().
 */
 
+int Partition_base::create(const char*, TABLE*, HA_CREATE_INFO*, dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
 int Partition_base::create(const char *name, TABLE *table_arg,
                            HA_CREATE_INFO *create_info)
 {
@@ -649,15 +676,15 @@ int Partition_base::create(const char *name, TABLE *table_arg,
   handler::delete_table(name);
   DBUG_RETURN(error);
 }
-
+#endif
 /** This function reads zip dict-related info from partition handlers.
 It may do nothing if individual handlers do not support COMPRESSED_COLUMNS.
 
 @param    thd          Thread handler.
 @param    part_name    Must be always NULL.
 */
-void Partition_base::update_field_defs_with_zip_dict_info(THD* thd,
-                                                        const char* part_name)
+void Partition_base::update_field_defs_with_zip_dict_info(THD* /*thd*/,
+                                                        const char* /*part_name*/)
 {
 #if 0
   DBUG_ENTER("Partition_base::update_field_defs_with_zip_dict_info");
@@ -720,8 +747,10 @@ int Partition_base::analyze(THD *thd, HA_CHECK_OPT *check_opt)
 
   int result= handle_opt_partitions(thd, check_opt, ANALYZE_PARTS);
 
-  if ((result == 0) && m_file[0]
-      && (m_file[0]->ha_table_flags() & HA_ONLINE_ANALYZE))
+  DBUG_ASSERT(0);
+  if ((result == 0) && m_file[0])
+// TODO: check for this flag necessary
+//      && (m_file[0]->ha_table_flags() & HA_ONLINE_ANALYZE))
   {
     /* If this is ANALYZE TABLE that will not force table definition cache
        eviction, update statistics for the partition handler. */
@@ -896,7 +925,7 @@ int Partition_base::handle_opt_partitions(THD *thd, HA_CHECK_OPT *check_opt,
   uint num_parts= m_part_info->num_parts;
   uint num_subparts= m_part_info->num_subparts;
   uint i= 0;
-  bool use_all_parts= !(thd->lex->alter_info.flags &
+  bool use_all_parts= !(thd->lex->alter_info->flags &
                           Alter_info::ALTER_ADMIN_PARTITION);
   int error;
   DBUG_ENTER("Partition_base::handle_opt_partitions");
@@ -1077,8 +1106,8 @@ bool Partition_base::is_crashed() const
     @retval != 0  Error code.
 */
 
-int Partition_base::prepare_for_new_partitions(uint num_partitions,
-                                             bool only_create)
+int Partition_base::prepare_for_new_partitions(uint num_partitions)//,
+//                                             bool only_create)
 {
   size_t alloc_size = num_partitions * sizeof(handler*);
   DBUG_ENTER("Partition_base::prepare_for_new_partition");
@@ -1112,7 +1141,8 @@ int Partition_base::prepare_for_new_partitions(uint num_partitions,
     @retval  0  Success
     @retval >0  Error
 */
-
+// TODO: check if the functions is necessary
+#if 0
 int Partition_base::create_new_partition(TABLE *tbl,
                                        HA_CREATE_INFO *create_info,
                                        const char *part_name,
@@ -1206,7 +1236,13 @@ error_open:
 error_create:
   DBUG_RETURN(error);
 }
+#endif
 
+#define tmp_disable_binlog(A)       \
+  {ulonglong tmp_disable_binlog__save_options= (A)->variables.option_bits; \
+  (A)->variables.option_bits&= ~OPTION_BIN_LOG
+
+#define reenable_binlog(A)   (A)->variables.option_bits= tmp_disable_binlog__save_options;}
 
 /** Insert a row to the new partition.
   @param part_id  Partition to insert into.
@@ -1308,7 +1344,7 @@ void Partition_base::update_create_info(HA_CREATE_INFO *create_info)
     DATA DIRECTORY and INDEX DIRECTORY are never applied to the whole
     partitioned table, only its parts.
   */
-  my_bool from_alter = (create_info->data_file_name == (const char*) -1);
+  bool from_alter = (create_info->data_file_name == (const char*) -1);
   create_info->data_file_name= create_info->index_file_name = NULL;
 
   /*
@@ -1463,8 +1499,14 @@ void Partition_base::change_table_ptr(TABLE *table_arg, TABLE_SHARE *share)
   names of the partitions and the underlying storage engines.
 */
 
-int Partition_base::del_ren_table(const char *from, const char *to)
+// TODO: review the code, it does not look correct
+// as some additional work with DD is required
+int Partition_base::del_ren_table(
+  const char *from, const char *to,
+  const dd::Table *table_def_from,
+  dd::Table *table_def_to)
 {
+  DBUG_ASSERT(0);
   const char *from_path;
   const char *to_path= NULL;
   char from_lc_buff[FN_REFLEN];
@@ -1490,14 +1532,15 @@ int Partition_base::del_ren_table(const char *from, const char *to)
         char from_buff[FN_REFLEN];
         part_name(from_buff, from_path, parent_part_elem, part_elem);
         if (!to) {
-          error = (*(file++))->ha_delete_table(from_buff);
+          error = (*(file++))->ha_delete_table(from_buff, table_def_from);
           if (error)
             save_error = error;
         }
         else {
           char to_buff[FN_REFLEN];
           part_name(to_buff, to_path, parent_part_elem, part_elem);
-          error= (*(file++))->ha_rename_table(from_buff, to_buff);
+          error= (*(file++))->ha_rename_table(
+            from_buff, to_buff, table_def_from, table_def_to);
           if (error)
             return false;
         }
@@ -1510,15 +1553,17 @@ int Partition_base::del_ren_table(const char *from, const char *to)
   if (!to)
   {
     /* Delete the partition-specific files. If error, break.*/
-    if ((error= handler::delete_table(from)))
+    if ((error= handler::delete_table(from, table_def_from)))
       return error;
   }
   else {
     /* Rename the partition-specific files. If error, break.*/
-    if ((error= handler::rename_table(from, to)))
+    if ((error= handler::rename_table(from, to, table_def_from, table_def_to)))
     {
       /* Try to revert everything, ignore errors */
-      (void) handler::rename_table(to, from);
+      // TODO: fix for const_cast here
+      (void) handler::rename_table(to, from,
+        table_def_to, const_cast<dd::Table *>(table_def_from));
       goto rename_error;
     }
   }
@@ -1538,7 +1583,10 @@ rename_error:
       part_name(from_buff, from_path, parent_part_elem, part_elem);
       part_name(to_buff, to_path, parent_part_elem, part_elem);
       /* Ignore error here */
-      (void) (*(abort_file++))->ha_rename_table(to_buff, from_buff);
+      // TODO: fix for const_cast here
+      (void) (*(abort_file++))->ha_rename_table(
+        to_buff, from_buff,
+        table_def_to, const_cast<dd::Table *>(table_def_from));
       return true;
     }
   );
@@ -1794,7 +1842,12 @@ bool Partition_base::init_partition_bitmaps()
     Called from handler.cc by handler::ha_open(). The server opens all tables
     by calling ha_open() which then calls the handler specific open().
 */
-
+int Partition_base::open(const char*, int, uint, const dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
 int Partition_base::open(const char *name, int mode, uint test_if_locked)
 {
   int error= HA_ERR_INITIALIZATION;
@@ -1985,7 +2038,7 @@ err:
 
   DBUG_RETURN(error);
 }
-
+#endif
 
 /*
   Disabled since it is not possible to prune yet.
@@ -2209,7 +2262,7 @@ THR_LOCK_DATA **Partition_base::store_lock(THD *thd,
 {
   uint i;
   DBUG_ENTER("Partition_base::store_lock");
-  DBUG_ASSERT(thd == current_thd);
+  DBUG_ASSERT(thd == ha_thd());
 
   /*
     This can be called from get_lock_data() in mysql_lock_abort_for_thread(),
@@ -2521,6 +2574,11 @@ int Partition_base::delete_all_rows()
   @retval  > 0  Error code.
 */
 
+int Partition_base::truncate(dd::Table*)
+{
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
 int Partition_base::truncate()
 {
   int error;
@@ -2548,7 +2606,7 @@ int Partition_base::truncate()
   } while (*(++file));
   DBUG_RETURN(0);
 }
-
+#endif
 
 /**
   Truncate a set of specific partitions.
@@ -2557,7 +2615,12 @@ int Partition_base::truncate()
 
   ALTER TABLE t TRUNCATE PARTITION ...
 */
-
+int Partition_base::truncate_partition_low(dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
 int Partition_base::truncate_partition_low()
 {
   int error= 0;
@@ -2592,7 +2655,7 @@ int Partition_base::truncate_partition_low()
   }
   DBUG_RETURN(error);
 }
-
+#endif
 
 /*
   Start a large batch of insert rows
@@ -2607,7 +2670,7 @@ int Partition_base::truncate_partition_low()
   DESCRIPTION
     rows == 0 means we will probably insert many rows
 */
-void Partition_base::start_bulk_insert(ha_rows rows)
+void Partition_base::start_bulk_insert(ha_rows /*rows*/)
 {
   DBUG_ENTER("Partition_base::start_bulk_insert");
 
@@ -3161,14 +3224,17 @@ int Partition_base::index_prev_in_part(uint part, uchar *buf)
     @retval != 0  Error code
 */
 
-int Partition_base::read_range_first_in_part(uint part_id,
-                                           uchar *buf,
-                                           const key_range *start_key,
-                                           const key_range *end_key,
-                                           bool eq_range_arg,
-                                           bool sorted)
+int Partition_base::read_range_first_in_part(uint /*part_id*/,
+                                           uchar * /*buf*/,
+                                           const key_range * /*start_key*/,
+                                           const key_range * /*end_key*/,
+                                           bool /*eq_range_arg*/,
+                                           bool /*sorted*/)
 {
+// TODO: fix is necessary here because read_range_first is protected
+/*
   int error;
+
   error= m_file[part_id]->read_range_first(start_key,
                                            end_key,
                                            eq_range_arg,
@@ -3178,6 +3244,9 @@ int Partition_base::read_range_first_in_part(uint part_id,
     memcpy(buf, table->record[0], m_rec_length);
   }
   return error;
+*/
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED;
 }
 
 
@@ -3191,8 +3260,10 @@ int Partition_base::read_range_first_in_part(uint part_id,
     @retval != 0  Error code
 */
 
-int Partition_base::read_range_next_in_part(uint part, uchar *buf)
+int Partition_base::read_range_next_in_part(uint /*part*/, uchar * /*buf*/)
 {
+// TODO: read_range_next is protected
+/*
   int error;
   error= m_file[part]->read_range_next();
   if (!error && buf != NULL)
@@ -3200,17 +3271,25 @@ int Partition_base::read_range_next_in_part(uint part, uchar *buf)
     memcpy(buf, table->record[0], m_rec_length);
   }
   return error;
+*/
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED;
 }
 
 bool Partition_base::has_gap_locks() const
 {
+// TODO: there is no has_gap_locks in handler
   /* Pass the call to each partition */
+/*
   for (uint i= 0; i < m_tot_parts; i++)
   {
     if (!m_file[i]->has_gap_locks())
       return false;
   }
   return true;
+*/
+  DBUG_ASSERT(0);
+  return false;
 }
 
 /****************************************************************************
@@ -3305,8 +3384,10 @@ int Partition_base::compare_number_of_records(Partition_base *me,
       retrieving statistics data.
 */
 
-int Partition_base::info(uint flag)
+int Partition_base::info(uint /*flag*/)
 {
+// TODO: replace my_qsort2 as it's does not exist in 8.0
+#if 0
   uint no_lock_flag= flag & HA_STATUS_NO_LOCK;
   uint extra_var_flag= flag & HA_STATUS_VARIABLE_EXTRA;
   int res, error= 0;
@@ -3480,7 +3561,6 @@ int Partition_base::info(uint flag)
               sizeof(uint32),
               (qsort2_cmp) compare_number_of_records,
               this);
-
     file= m_file[handler_instance];
     res= file->info(HA_STATUS_CONST | no_lock_flag);
     if (res && !error)
@@ -3532,6 +3612,9 @@ int Partition_base::info(uint flag)
     }
   }
   DBUG_RETURN(error);
+#endif
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED;
 }
 
 
@@ -4247,16 +4330,21 @@ void Partition_base::late_extra_no_cache(uint partition_id)
 /**
   Get keys to use for scanning.
 
-  @return key_map of keys usable for scanning
+  @return Key_map of keys usable for scanning
 
   @note No need to use read_partitions here, since it does not depend on
   which partitions is used, only which storage engine used.
 */
 
-const key_map *Partition_base::keys_to_use_for_scanning()
+const Key_map *Partition_base::keys_to_use_for_scanning()
 {
+// TODO: check if the function is necessary as handler does not contain it
+/*
   DBUG_ENTER("Partition_base::keys_to_use_for_scanning");
   DBUG_RETURN(m_file[0]->keys_to_use_for_scanning());
+*/
+  DBUG_ASSERT(0);
+  return nullptr;
 }
 
 
@@ -4552,9 +4640,14 @@ bool Partition_base::can_switch_engines()
 
 uint8 Partition_base::table_cache_type()
 {
+// TODO: handler does not contains such a function
+/*
   DBUG_ENTER("Partition_base::table_cache_type");
 
   DBUG_RETURN(m_file[0]->table_cache_type());
+*/
+  DBUG_ASSERT(0);
+  return 0;
 }
 
 
@@ -4562,8 +4655,10 @@ uint8 Partition_base::table_cache_type()
                 MODULE print messages
 ****************************************************************************/
 
-const char *Partition_base::index_type(uint inx)
+const char *Partition_base::index_type(uint /*inx*/)
 {
+// TODO: handler does not contain such function
+/*
   uint first_used_partition;
   DBUG_ENTER("Partition_base::index_type");
 
@@ -4573,14 +4668,20 @@ const char *Partition_base::index_type(uint inx)
   {
     DBUG_ASSERT(0);                             // How can this happen?
     DBUG_RETURN(handler::index_type(inx));
+
   }
 
   DBUG_RETURN(m_file[first_used_partition]->index_type(inx));
+*/
+  DBUG_ASSERT(0);
+  return nullptr;
 }
 
 
 enum row_type Partition_base::get_row_type() const
 {
+// TODO: get_row_type is abscent in handler
+/*
   uint i;
   enum row_type type;
   DBUG_ENTER("Partition_base::get_row_type");
@@ -4604,12 +4705,15 @@ enum row_type Partition_base::get_row_type() const
   }
 
   DBUG_RETURN(type);
+*/
+  DBUG_ASSERT(0);
+  return row_type(0);
 }
 
 void Partition_base::print_error(int error, myf errflag)
 {
   DBUG_ENTER("Partition_base::print_error");
-  if (print_partition_error(error, errflag))
+  if (print_partition_error(error))
   {
     /* Not a partitioning error. */
     /* In case m_file has not been initialized, like in bug#42438 */
@@ -4712,7 +4816,7 @@ private:
   uint m_tot_parts;
 
 public:
-  Partition_base_inplace_ctx(THD *thd, uint tot_parts)
+  Partition_base_inplace_ctx(THD * /*thd*/, uint tot_parts)
     : inplace_alter_handler_ctx(),
       handler_ctx_array(NULL),
       m_tot_parts(tot_parts)
@@ -4746,9 +4850,7 @@ Partition_base::check_if_supported_inplace_alter(TABLE *altered_table,
     Any other change would set partition_changed in
     prep_alter_part_table() in mysql_alter_table().
   */
-  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION ||
-      ha_alter_info->alter_info->flags ==
-        Alter_info::ALTER_UPGRADE_PARTITIONING)
+  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION)
     DBUG_RETURN(HA_ALTER_INPLACE_NO_LOCK);
 
   /* We cannot allow INPLACE to change order of KEY partitioning fields! */
@@ -4810,7 +4912,13 @@ Partition_base::check_if_supported_inplace_alter(TABLE *altered_table,
   DBUG_RETURN(result);
 }
 
-
+bool Partition_base::prepare_inplace_alter_table(
+      TABLE*, Alter_inplace_info*, const dd::Table*, dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return false; // TODO: NYI
+}
+#if 0
 bool Partition_base::prepare_inplace_alter_table(TABLE *altered_table,
                                                Alter_inplace_info *ha_alter_info)
 {
@@ -4844,8 +4952,15 @@ bool Partition_base::prepare_inplace_alter_table(TABLE *altered_table,
 
   DBUG_RETURN(error);
 }
+#endif
 
-
+bool Partition_base::inplace_alter_table(
+  TABLE*, Alter_inplace_info*, const dd::Table*, dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return false; // TODO: NYI
+}
+#if 0
 bool Partition_base::inplace_alter_table(TABLE *altered_table,
                                        Alter_inplace_info *ha_alter_info)
 {
@@ -4879,7 +4994,7 @@ bool Partition_base::inplace_alter_table(TABLE *altered_table,
 
   DBUG_RETURN(error);
 }
-
+#endif
 
 /*
   Note that this function will try rollback failed ADD INDEX by
@@ -4888,6 +5003,13 @@ bool Partition_base::inplace_alter_table(TABLE *altered_table,
   engine must be able to drop index in-place with X-lock held.
   (As X-lock will be held here if new indexes are to be committed)
 */
+bool Partition_base::commit_inplace_alter_table(
+  TABLE*, Alter_inplace_info*, bool, const dd::Table*, dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return false; // TODO: NYI
+}
+#if 0
 bool Partition_base::commit_inplace_alter_table(TABLE *altered_table,
                                               Alter_inplace_info *ha_alter_info,
                                               bool commit)
@@ -4956,21 +5078,27 @@ end:
 
   DBUG_RETURN(error);
 }
+#endif
 
-
-void Partition_base::notify_table_changed()
+void Partition_base::notify_table_changed(Alter_inplace_info* aii)
 {
   handler **file;
 
   DBUG_ENTER("Partition_base::notify_table_changed");
 
   for (file= m_file; *file; file++)
-    (*file)->ha_notify_table_changed();
+    (*file)->ha_notify_table_changed(aii);
 
   DBUG_VOID_RETURN;
 }
 
-int Partition_base::discard_or_import_tablespace(my_bool discard)
+int Partition_base::discard_or_import_tablespace(bool, dd::Table*)
+{
+  DBUG_ASSERT(0);
+  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+}
+#if 0
+int Partition_base::discard_or_import_tablespace(bool discard)
 {
   int error= 0;
   uint i;
@@ -4988,7 +5116,7 @@ int Partition_base::discard_or_import_tablespace(my_bool discard)
 
   DBUG_RETURN(error);
 }
-
+#endif
 
 uint Partition_base::min_of_the_max_uint(
                        uint (handler::*operator_func)(void) const) const
@@ -5082,7 +5210,7 @@ uint Partition_base::min_record_length(uint options) const
     they are the same. Sort in partition id order if not equal.
 */
 
-int Partition_base::cmp_ref(const uchar *ref1, const uchar *ref2)
+int Partition_base::cmp_ref(const uchar *ref1, const uchar *ref2) const
 {
   int cmp;
   my_ptrdiff_t diff1, diff2;
@@ -5313,7 +5441,10 @@ void Partition_base::get_auto_increment(ulonglong offset, ulonglong increment,
       {
         *first_value= first_value_part;
         /* log that the error was between table/partition handler */
-        sql_print_error("Partition failed to reserve auto_increment value");
+        LogPluginErrMsg(ERROR_LEVEL,
+                        0,
+                        "Partition failed to reserve auto_increment value");
+
         unlock_auto_increment();
         DBUG_VOID_RETURN;
       }
@@ -5476,9 +5607,6 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
   */
   if (!(check_opt->sql_flags & TT_FOR_UPGRADE))
   {
-    if (m_file[0]->ht->partition_flags)
-      DBUG_RETURN(HA_ADMIN_NEEDS_UPG_PART);
-
     DBUG_RETURN(error);
   }
 
@@ -5489,7 +5617,7 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
     differs from 5.1, see bug#14521864.
   */
   if (table->s->mysql_version < 50503 &&              // 5.1 table (<5.5.3)
-      ((m_part_info->part_type == HASH_PARTITION &&   // KEY partitioned
+      ((m_part_info->part_type == partition_type::HASH &&   // KEY partitioned
         m_part_info->list_of_part_fields) ||
        (m_is_sub_partitioned &&                       // KEY subpartitioned
         m_part_info->list_of_subpart_fields)))
@@ -5527,14 +5655,14 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
           String db_name, table_name;
           uint part_buf_len;
           bool skip_generation= false;
-          partition_info::enum_key_algorithm old_algorithm;
+          enum_key_algorithm old_algorithm;
           old_algorithm= m_part_info->key_algorithm;
           error= HA_ADMIN_FAILED;
           append_identifier(ha_thd(), &db_name, table_share->db.str,
                             table_share->db.length);
           append_identifier(ha_thd(), &table_name, table_share->table_name.str,
                             table_share->table_name.length);
-          if (m_part_info->key_algorithm != partition_info::KEY_ALGORITHM_NONE)
+          if (m_part_info->key_algorithm != enum_key_algorithm::KEY_ALGORITHM_NONE)
           {
             /*
               Only possible when someone tampered with .frm files,
@@ -5542,14 +5670,14 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
             */
             skip_generation= true;
           }
-          m_part_info->key_algorithm= partition_info::KEY_ALGORITHM_51;
+          m_part_info->key_algorithm= enum_key_algorithm::KEY_ALGORITHM_51;
           if (skip_generation ||
+              // TODO: check for correctness of the last two arguments
               !(part_buf= generate_partition_syntax(m_part_info,
                                                     &part_buf_len,
                                                     true,
                                                     true,
-                                                    NULL,
-                                                    NULL,
+                                                    false,
                                                     NULL)) ||
               print_admin_msg(thd, SQL_ADMIN_MSG_TEXT_SIZE + 1, "error",
                               table_share->db.str,
@@ -5580,12 +5708,6 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
     }
   }
 
-  if (m_file[0]->ht->partition_flags)
-  {
-    /* No longer needs Partition_base. */
-    error= HA_ADMIN_NEEDS_UPG_PART;
-  }
-
   DBUG_RETURN(error);
 }
 
@@ -5595,11 +5717,15 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
 */
 void Partition_base::rpl_before_write_rows()
 {
+  // TODO: class handler has no member rpl_before_write_rows
+/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_before_write_rows();
   }
+*/
+  DBUG_ASSERT(0);
 }
 
 /*
@@ -5607,11 +5733,15 @@ void Partition_base::rpl_before_write_rows()
 */
 void Partition_base::rpl_after_write_rows()
 {
+// TODO: class handler has no member rpl_after_write_rows
+/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_after_write_rows();
   }
+*/
+  DBUG_ASSERT(0);
 }
 
 /*
@@ -5620,12 +5750,15 @@ void Partition_base::rpl_after_write_rows()
 */
 void Partition_base::rpl_before_delete_rows()
 {
-
+// TODO: class handler has no member rpl_before_delete_rows
+/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_before_delete_rows();
   }
+*/
+  DBUG_ASSERT(0);
 }
 
 /*
@@ -5633,11 +5766,15 @@ void Partition_base::rpl_before_delete_rows()
 */
 void Partition_base::rpl_after_delete_rows()
 {
+// TODO: class handler has no member rpl_after_delete_rows
+/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_after_delete_rows();
   }
+*/
+  DBUG_ASSERT(0);
 }
 
 /*
@@ -5646,11 +5783,15 @@ void Partition_base::rpl_after_delete_rows()
 */
 void Partition_base::rpl_before_update_rows()
 {
+// TODO: class handler has no member rpl_before_update_rows
+/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_before_update_rows();
   }
+*/
+  DBUG_ASSERT(0);
 }
 
 /*
@@ -5658,11 +5799,15 @@ void Partition_base::rpl_before_update_rows()
 */
 void Partition_base::rpl_after_update_rows()
 {
+// TODO: class handler has no member rpl_after_update_rows
+/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_after_update_rows();
   }
+*/
+  DBUG_ASSERT(0);
 }
 
 /*
@@ -5672,5 +5817,8 @@ void Partition_base::rpl_after_update_rows()
 */
 bool Partition_base::rpl_lookup_rows()
 {
-  return m_file[0]->rpl_lookup_rows();
+// TODO: class handler has no member rpl_lookup_rows
+//  return m_file[0]->rpl_lookup_rows();
+  DBUG_ASSERT(0);
+  return false;
 }
