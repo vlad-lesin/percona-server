@@ -61,6 +61,9 @@ static handler* tokudb_create_handler(
     bool partitioned,
     MEM_ROOT* mem_root);
 
+/** Return partitioning flags. */
+static uint tokudb_partition_flags();
+
 static void tokudb_print_error(
     const DB_ENV* db_env,
     const char* db_errpfx,
@@ -347,6 +350,7 @@ static int tokudb_init_func(void *p) {
 #endif
 
     tokudb_hton->create = tokudb_create_handler;
+    tokudb_hton->partition_flags = tokudb_partition_flags;
     tokudb_hton->close_connection = tokudb_close_connection;
     tokudb_hton->kill_connection = tokudb_kill_connection;
 
@@ -646,9 +650,28 @@ static int tokudb_done_func(TOKUDB_UNUSED(void* p)) {
 static handler* tokudb_create_handler(
     handlerton* hton,
     TABLE_SHARE* table,
-    TOKUDB_UNUSED(bool partitioned),
+    bool partitioned,
     MEM_ROOT* mem_root) {
+
+    (void)(partitioned);
+    if (table && table->db_type() == tokudb_hton &&
+        table->partition_info_str && table->partition_info_str_len) {
+//    if (partitioned) {
+        DBUG_ASSERT(partitioned);
+        ha_tokupart* file = new (mem_root) ha_tokupart(hton, table);
+        if (file && file->init_partitioning(mem_root))
+        {
+            destroy(file);
+            return(NULL);
+        }
+        return(file);
+    }
+
     return new(mem_root) ha_tokudb(hton, table);
+}
+
+static uint tokudb_partition_flags() {
+    return(HA_CAN_EXCHANGE_PARTITION | HA_CANNOT_PARTITION_FK);
 }
 
 int tokudb_end(TOKUDB_UNUSED(handlerton* hton),

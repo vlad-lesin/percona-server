@@ -4393,7 +4393,8 @@ protected:
     uint key_len= calculate_key_len(table, active_index, keypart_map);
     return index_read_last(buf, key, key_len);
   }
-
+// It's required for TokuDB partitioning
+public:
   virtual int read_range_first(const key_range *start_key,
                                const key_range *end_key,
                                bool eq_range, bool sorted);

@@ -27,6 +27,11 @@ private:
   virtual handler *clone(const char *name, MEM_ROOT *mem_root);
   virtual ulong index_flags(uint inx, uint part, bool all_parts) const;
   virtual const char **bas_ext() const;
+  virtual int delete_partition_file(handler *file,
+                                    const char *name,
+                                    const dd::Table *table_def);
+
+  bool rpl_lookup_rows();
 };
 
 #endif // _HA_TOKUPART_H

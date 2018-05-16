@@ -61,8 +61,10 @@ private:
 private:
   /* Data for the partition handler */
   int  m_mode;                          // Open mode
-  uint m_open_test_lock;                // Open test_if_locked
+//  uint m_open_test_lock;                // Open test_if_locked
+protected: // Allow engine-specific handlers to access to the partitions array.
   handler **m_file;                     // Array of references to handler inst.
+private:
   uint m_file_tot_parts;                // Debug
   /*
     Since the partition handler is a handler on top of other handlers, it
@@ -155,6 +157,10 @@ private:
   MY_BITMAP m_partitions_to_reset;
 public:
   virtual handler *clone(const char *name, MEM_ROOT *mem_root) = 0;
+  virtual int delete_partition_file(handler *file,
+                                    const char *name,
+                                    const dd::Table *table_def) = 0;
+
   /*
     -------------------------------------------------------------------------
     MODULE create/delete handler object
@@ -172,8 +178,7 @@ public:
                  Partition_base *clone_arg,
                  MEM_ROOT *clone_mem_root_arg);
    ~Partition_base();
-   // TODO: check if the function is necessary
-//   bool init_with_fields();
+   bool init_with_fields();
   /*
     A partition handler has no characteristics in itself. It only inherits
     those from the underlying handlers. Here we set-up those constants to
@@ -217,6 +222,7 @@ public:
 */
   int change_partitions_low(
     HA_CREATE_INFO*, const char*, ulonglong*, ulonglong*) {
+    DBUG_ASSERT(0);
     return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   /** This function reads zip dict-related info from partition handlers.
@@ -444,11 +450,7 @@ public:
   {
     return Partition_helper::ph_rnd_next(buf);
   }
-  int rnd_pos(uchar * /*buf*/, uchar * /*pos*/)
-  {
-    //return Partition_helper::ph_rnd_pos(buf, pos);
-    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-  }
+  int rnd_pos(uchar *buf, uchar *pos);
   int rnd_pos_by_record(uchar *record)
   {
     if (unlikely(get_part_for_delete(record,
@@ -506,16 +508,8 @@ public:
                                                keypart_map,
                                                find_flag);
   }
-  virtual int index_init(uint /*idx*/, bool /*sorted*/)
-  {
-//    return Partition_helper::ph_index_init(idx, sorted);
-    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-  }
-  virtual int index_end()
-  {
-//    return Partition_helper::ph_index_end();
-    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-  }
+  virtual int index_init(uint idx, bool sorted);
+  virtual int index_end();
 
   /**
     @breif
@@ -558,6 +552,7 @@ public:
   int index_next_same(uchar * /*buf*/, const uchar * /*key*/, uint  /*keylen*/)
   {
 //    return Partition_helper::ph_index_next_same(buf, key, keylen);
+    DBUG_ASSERT(0);
     return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   int index_read_last_map(uchar *buf,
@@ -1150,6 +1145,7 @@ public:
   ha_checksum checksum() const
   {
 //    return Partition_helper::ph_checksum();
+    DBUG_ASSERT(0);
     return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
   }
   /* Enabled keycache for performance reasons, WL#4571 */
@@ -1185,7 +1181,9 @@ public:
     void rpl_after_delete_rows();
     void rpl_before_update_rows();
     void rpl_after_update_rows();
-    bool rpl_lookup_rows();
+    // Check if this function is really neccessary, it is absent in innodb and
+    // almost not used in 5.7
+    virtual bool rpl_lookup_rows() = 0;
 
   /*
     -------------------------------------------------------------------------

@@ -55,9 +55,12 @@ handler *ha_tokupart::clone(const char *name, MEM_ROOT *mem_root)
                                               ALIGN_SIZE(ref_length)*2)))
     goto err;
 
+  // TODO: fix the last argument of ha_open
+  DBUG_ASSERT(0);
   if (new_handler->ha_open(table, name,
                            table->db_stat,
-                           HA_OPEN_IGNORE_IF_LOCKED | HA_OPEN_NO_PSI_CALL))
+                           HA_OPEN_IGNORE_IF_LOCKED,
+                           nullptr))
     goto err;
 
   DBUG_RETURN((handler*) new_handler);
@@ -67,7 +70,8 @@ err:
   DBUG_RETURN(NULL);
 }
 
-ulong ha_tokupart::index_flags(uint idx, uint part, bool all_parts) const {
+ulong ha_tokupart::index_flags(
+  uint idx, uint /*part*/, bool /*all_parts*/) const {
     TOKUDB_HANDLER_DBUG_ENTER("");
     assert_always(table_share);
     ulong flags = (HA_READ_NEXT | HA_READ_PREV | HA_READ_ORDER |
@@ -84,3 +88,24 @@ const char **ha_tokupart::bas_ext() const {
     DBUG_RETURN(&null_ext);
 }
 
+int ha_tokupart::delete_partition_file(handler *file,
+                                      const char *name,
+                                      const dd::Table * /*table_def*/) {
+  return
+    static_cast<ha_tokudb *>(file)->delete_non_partitioned_table(name);
+}
+
+#if defined(TOKU_INCLUDE_RFR) && TOKU_INCLUDE_RFR
+/*
+  Check whether we need to perform row lookup when executing
+  Update_rows_log_event or Delete_rows_log_event. Use the 1st
+  partition is enough, see @c ha_tokudb::rpl_lookup_rows().
+*/
+bool ha_tokupart::rpl_lookup_rows() {
+  return (static_cast<ha_tokudb *>(m_file[0]))->rpl_lookup_rows();
+}
+#else // defined(TOKU_INCLUDE_RFR) && TOKU_INCLUDE_RFR
+bool ha_tokupart::rpl_lookup_rows() {
+  return true;
+}
+#endif // defined(TOKU_INCLUDE_RFR) && TOKU_INCLUDE_RFR

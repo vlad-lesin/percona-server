@@ -1,0 +1,57 @@
+# This test is for debugging
+
+--source include/have_tokudb.inc
+
+--let $MYSQLD_DATADIR=`select @@datadir`
+
+CREATE TABLE `t1` (
+  `f_int1` int(11) DEFAULT NULL,
+  `f_int2` int(11) DEFAULT NULL,
+  `f_char1` char(20) DEFAULT NULL,
+  `f_char2` char(20) DEFAULT NULL,
+  `f_charbig` varchar(1000) DEFAULT NULL
+) ENGINE=TokuDB
+PARTITION BY RANGE (f_int1 DIV 2)
+SUBPARTITION BY HASH (f_int1)
+SUBPARTITIONS 2
+(PARTITION parta VALUES LESS THAN (0) ENGINE = TokuDB,
+ PARTITION partb VALUES LESS THAN (5) ENGINE = TokuDB,
+ PARTITION partc VALUES LESS THAN (10) ENGINE = TokuDB,
+ PARTITION partd VALUES LESS THAN (2147483646) ENGINE = TokuDB);
+
+--list_files $MYSQLD_DATADIR/test *
+DROP TABLE t1;
+
+create table t1 (a int unsigned not null,
+                 b int unsigned not null,
+                 c int unsigned not null,
+                 primary key(a),index k_b_c (b, c)
+                 ) engine=tokudb
+PARTITION BY RANGE (a) (
+    PARTITION p0 VALUES LESS THAN (100),
+    PARTITION p1 VALUES LESS THAN (200),
+    PARTITION p2 VALUES LESS THAN (300),
+    PARTITION p3 VALUES LESS THAN (400)
+);
+
+--list_files $MYSQLD_DATADIR/test *
+
+#insert into t1 set a = 250, b = 250, c = 250;
+#insert into t1 set a = 255, b = 255, c = 255;
+#insert into t1 set a = 350, b = 350, c = 350;
+#insert into t1 set a = 355, b = 355, c = 355;
+#insert into t1 set a = 50, b = 50, c = 50;
+#insert into t1 set a = 55, b = 55, c = 55;
+
+#select * from t1;
+
+#select * from t1 where a = 355;
+
+#update t1 set a = 10 where a = 355;
+#select * from t1;
+
+#update t1 set a = a + 1;
+#select * from t1;
+
+
+drop table t1;
