@@ -20,6 +20,10 @@ SET @innodb_print_lock_wait_timeout_info_saved =
 SET GLOBAL innodb_lock_wait_timeout = 1;
 SET GLOBAL innodb_print_lock_wait_timeout_info = true;
 
+--echo ######
+--echo # Test for the case when blocking query resul has been already sent
+--echo # to the client and we can't get blocking query string
+--echo ###
 CREATE TABLE t (i INT) ENGINE = InnoDB;
 INSERT INTO t (i) VALUES(1);
 
@@ -31,16 +35,54 @@ START TRANSACTION;
 --error ER_LOCK_WAIT_TIMEOUT
 DELETE FROM t WHERE i = 1;
 COMMIT;
---disconnect con0
 
 --connection default
 DELETE FROM t WHERE i = 1;
 COMMIT;
 
---echo Grepping the error log for lock wait timeout info
+--echo ######
+--echo # Test for the case when blocking query resul has NOT been already sent
+--echo # to the client and we CAN get blocking query string
+--echo ###
+INSERT INTO t (i) VALUES(1);
+START TRANSACTION;
+--send SELECT * FROM t WHERE i = 1 LOCK IN SHARE MODE
+
+--connection con0
+START TRANSACTION;
+--error ER_LOCK_WAIT_TIMEOUT
+DELETE FROM t WHERE i = 1;
+COMMIT;
+--disconnect con0
+
+--connection default
+--reap
+DELETE FROM t WHERE i = 1;
+COMMIT;
+
+--echo #####
+--echo #Check if the error log file contains lock wait timeout info.
+--echo ###
 --let SEARCH_FILE= $log_error_path
---let SEARCH_PATTERN= Lock wait timeout info:
---source include/search_pattern_in_file.inc
+perl;
+  use strict;
+  my $search_file = $ENV{'SEARCH_FILE'};
+  open(FILE, "<$search_file") or die("Unable to open '$search_file': $!\n");
+  while(<FILE>) {
+    print "$1\n" if (m/(Lock wait timeout info:)$/);
+    print "$1 #\n" if (m/(^Requested thread id:) \d+$/);
+    print "$1 #\n" if (m/(^Requested trx id:) \d+$/);
+    print "$1\n" if (m/(^Requested query: .+$)/);
+    print "$1 #\n" if (m/(^Total blocking transactions count:) \d+$/);
+    print "$1 #\n" if (m/(^Blocking transaction number:) \d+$/);
+    print "$1 #\n" if (m/(^Blocking thread id:) \d+$/);
+    print "$1 #\n" if (m/(^Blocking query id:) \d+$/);
+    print "$1\n" if (m/(^Blocking query: .*$)/);
+    print "$1 #\n" if (m/(^Blocking trx id:) \d+$/);
+  }
+  close(FILE);
+EOF
+
 --remove_file $log_error_path
 
 DROP TABLE t;

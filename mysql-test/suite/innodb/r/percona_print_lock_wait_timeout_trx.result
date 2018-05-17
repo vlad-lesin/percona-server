@@ -4,6 +4,10 @@ SET @innodb_print_lock_wait_timeout_info_saved =
 @@GLOBAL.innodb_print_lock_wait_timeout_info;
 SET GLOBAL innodb_lock_wait_timeout = 1;
 SET GLOBAL innodb_print_lock_wait_timeout_info = true;
+######
+# Test for the case when blocking query resul has been already sent
+# to the client and we can't get blocking query string
+###
 CREATE TABLE t (i INT) ENGINE = InnoDB;
 INSERT INTO t (i) VALUES(1);
 START TRANSACTION;
@@ -16,7 +20,44 @@ ERROR HY000: Lock wait timeout exceeded; try restarting transaction
 COMMIT;
 DELETE FROM t WHERE i = 1;
 COMMIT;
-Grepping the error log for lock wait timeout info
+######
+# Test for the case when blocking query resul has NOT been already sent
+# to the client and we CAN get blocking query string
+###
+INSERT INTO t (i) VALUES(1);
+START TRANSACTION;
+SELECT * FROM t WHERE i = 1 LOCK IN SHARE MODE;
+START TRANSACTION;
+DELETE FROM t WHERE i = 1;
+ERROR HY000: Lock wait timeout exceeded; try restarting transaction
+COMMIT;
+i
+1
+DELETE FROM t WHERE i = 1;
+COMMIT;
+#####
+#Check if the error log file contains lock wait timeout info.
+###
+Lock wait timeout info:
+Requested thread id: #
+Requested trx id: #
+Requested query: DELETE FROM t WHERE i = 1
+Total blocking transactions count: #
+Blocking transaction number: #
+Blocking thread id: #
+Blocking query id: #
+Blocking query: 
+Blocking trx id: #
+Lock wait timeout info:
+Requested thread id: #
+Requested trx id: #
+Requested query: DELETE FROM t WHERE i = 1
+Total blocking transactions count: #
+Blocking transaction number: #
+Blocking thread id: #
+Blocking query id: #
+Blocking query: SELECT * FROM t WHERE i = 1 LOCK IN SHARE MODE
+Blocking trx id: #
 DROP TABLE t;
 SET GLOBAL innodb_lock_wait_timeout = @innodb_lock_wait_timeout_saved;
 SET GLOBAL innodb_print_lock_wait_timeout_info =

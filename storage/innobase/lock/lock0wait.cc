@@ -38,13 +38,16 @@ Created 25/5/2010 Sunny Bains
 
 #include <sstream>
 
+static const size_t MAX_BLOCKING_TRX_IN_REPORT = 10;
+static const size_t MAX_BLOCKING_QUERY_LEN_IN_REPORT = 1024;
+
 struct blocking_trx_info {
 	uint64_t trx_id;
 	uint32_t thread_id;
 	int64_t query_id;
+	char query[MAX_BLOCKING_QUERY_LEN_IN_REPORT];
 };
 
-static const size_t MAX_BLOCKING_TRX_IN_REPORT = 10;
 
 /*********************************************************************//**
 Print the contents of the lock_sys_t::waiting_threads array. */
@@ -223,6 +226,9 @@ print_lock_wait_timeout(
 		outs << "Blocking query id: " <<
 			blocking[i].query_id <<
 			"\n";
+		outs << "Blocking query: " <<
+			blocking[i].query <<
+			"\n";
 		outs << "Blocking trx id: " << blocking[i].trx_id << "\n";
 	}
 	ib::info() << outs.str();
@@ -321,12 +327,21 @@ lock_wait_suspend_thread(
 				curr_lock = lock_queue_iterator_get_prev(&iter)) {
 				if (lock_has_to_wait(trx->lock.wait_lock, curr_lock)) {
 					blocking[blocking_count].trx_id = lock_get_trx_id(curr_lock);
-					blocking[blocking_count].thread_id =
-						curr_lock->trx->mysql_thd ?
-						thd_get_thread_id(curr_lock->trx->mysql_thd) : 0;
-					blocking[blocking_count].query_id =
-					curr_lock->trx->mysql_thd ?
-						thd_get_query_id(curr_lock->trx->mysql_thd) : 0;
+					if (curr_lock->trx->mysql_thd) {
+						blocking[blocking_count].thread_id =
+							thd_get_thread_id(curr_lock->trx->mysql_thd);
+						blocking[blocking_count].query_id =
+							thd_get_query_id(curr_lock->trx->mysql_thd);
+						innobase_get_stmt_safe(
+							curr_lock->trx->mysql_thd,
+							blocking[blocking_count].query,
+							MAX_BLOCKING_QUERY_LEN_IN_REPORT);
+					}
+					else {
+						blocking[blocking_count].thread_id = 0;
+						blocking[blocking_count].query_id = 0;
+						blocking[blocking_count].query[0]= '\0';
+					}
 					/* Only limited number of blocking transaction infos is implemented*/
 					if ((++blocking_count) >= MAX_BLOCKING_TRX_IN_REPORT)
 						break;
