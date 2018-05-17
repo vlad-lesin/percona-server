@@ -23,13 +23,10 @@ public:
 
 private:
   virtual handler *get_file_handler(TABLE_SHARE *share,
-                                    MEM_ROOT *alloc);
+                                    MEM_ROOT *alloc) const;
   virtual handler *clone(const char *name, MEM_ROOT *mem_root);
   virtual ulong index_flags(uint inx, uint part, bool all_parts) const;
   virtual const char **bas_ext() const;
-  virtual int delete_partition_file(handler *file,
-                                    const char *name,
-                                    const dd::Table *table_def);
 
   bool rpl_lookup_rows();
 };

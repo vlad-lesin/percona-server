@@ -1,6 +1,6 @@
 
 handler *ha_tokupart::get_file_handler(TABLE_SHARE *share,
-                                       MEM_ROOT *alloc) {
+                                       MEM_ROOT *alloc) const {
   ha_tokudb *file = new(alloc) ha_tokudb(tokudb_hton, share);
   file->init();
   return file;
@@ -86,13 +86,6 @@ const char **ha_tokupart::bas_ext() const {
     static const char *null_ext = nullptr;
     TOKUDB_HANDLER_DBUG_ENTER("");
     DBUG_RETURN(&null_ext);
-}
-
-int ha_tokupart::delete_partition_file(handler *file,
-                                      const char *name,
-                                      const dd::Table * /*table_def*/) {
-  return
-    static_cast<ha_tokudb *>(file)->delete_non_partitioned_table(name);
 }
 
 #if defined(TOKU_INCLUDE_RFR) && TOKU_INCLUDE_RFR

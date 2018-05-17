@@ -698,19 +698,15 @@ int Partition_base::delete_table(const char *name)
 */
 
 int Partition_base::rename_table(
-  const char*, const char*, const dd::Table*, dd::Table*)
-{
-  DBUG_ASSERT(0);
-  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-}
-#if 0
-int Partition_base::rename_table(const char *from, const char *to)
+  const char *from,
+  const char *to,
+  const dd::Table *table_def_from,
+  dd::Table *table_def_to)
 {
   DBUG_ENTER("Partition_base::rename_table");
 
-  DBUG_RETURN(del_ren_table(from, to));
+  DBUG_RETURN(del_ren_table(from, to, table_def_from, table_def_to));
 }
-#endif
 
 
 /*
@@ -1694,7 +1690,7 @@ int Partition_base::del_ren_table(
     if (!to) {
       error =
         // TODO: invoke non-partitioned delete function
-        delete_partition_file(file.get(), from_name.c_str(), table_def_from);
+        file->ha_delete_table(from_name.c_str(), table_def_from);
       if (error)
         save_error = error;
     }
@@ -4975,9 +4971,18 @@ handler::Table_flags Partition_base::table_flags() const
 {
   uint first_used_partition= 0;
   DBUG_ENTER("Partition_base::table_flags");
+
   if (m_handler_status < handler_initialized ||
       m_handler_status >= handler_closed)
     DBUG_RETURN(PARTITION_ENABLED_TABLE_FLAGS);
+
+  if (!m_file) {
+    std::unique_ptr<handler, Destroy_only<handler>>
+      file(get_file_handler(nullptr, ha_thd()->mem_root));
+      return (file->ha_table_flags() &
+        ~(PARTITION_DISABLED_TABLE_FLAGS)) |
+        (PARTITION_ENABLED_TABLE_FLAGS);
+  }
 
   if (get_lock_type() != F_UNLCK)
   {
@@ -5336,56 +5341,70 @@ int Partition_base::discard_or_import_tablespace(bool discard)
 }
 #endif
 
-uint Partition_base::min_of_the_max_uint(
-                       uint (handler::*operator_func)(void) const) const
-{
-  handler **file;
-  uint min_of_the_max= ((*m_file)->*operator_func)();
-
-  for (file= m_file+1; *file; file++)
-  {
-    uint tmp= ((*file)->*operator_func)();
-    set_if_smaller(min_of_the_max, tmp);
-  }
-  return min_of_the_max;
-}
-
-
 uint Partition_base::max_supported_key_parts() const
 {
-  return min_of_the_max_uint(&handler::max_supported_key_parts);
+  if (m_file)
+    return m_file[0]->max_supported_key_parts();
+  return
+    std::unique_ptr<handler, Destroy_only<handler>>(
+      get_file_handler(nullptr, ha_thd()->mem_root))->
+        max_supported_key_parts();
 }
 
 
 uint Partition_base::max_supported_key_length() const
 {
-  return min_of_the_max_uint(&handler::max_supported_key_length);
+  if (m_file)
+    return m_file[0]->max_supported_key_length();
+  return
+    std::unique_ptr<handler, Destroy_only<handler>>(
+      get_file_handler(nullptr, ha_thd()->mem_root))->
+        max_supported_key_length();
 }
 
 
 uint Partition_base::max_supported_key_part_length() const
 {
-  return min_of_the_max_uint(&handler::max_supported_key_part_length);
+  if (m_file)
+    return m_file[0]->max_supported_key_part_length();
+  return
+    std::unique_ptr<handler, Destroy_only<handler>>(
+      get_file_handler(nullptr, ha_thd()->mem_root))->
+        max_supported_key_part_length();
 }
 
 
 uint Partition_base::max_supported_record_length() const
 {
-  return min_of_the_max_uint(&handler::max_supported_record_length);
+  if (m_file)
+    return m_file[0]->max_supported_record_length();
+  return
+    std::unique_ptr<handler, Destroy_only<handler>>(
+      get_file_handler(nullptr, ha_thd()->mem_root))->
+        max_supported_record_length();
 }
 
 
 uint Partition_base::max_supported_keys() const
 {
-  return min_of_the_max_uint(&handler::max_supported_keys);
+  if (m_file)
+    return m_file[0]->max_supported_keys();
+  return
+    std::unique_ptr<handler, Destroy_only<handler>>(
+      get_file_handler(nullptr, ha_thd()->mem_root))->max_supported_keys();
 }
 
 
 uint Partition_base::extra_rec_buf_length() const
 {
-  handler **file;
+  if (!m_file)
+    return
+      std::unique_ptr<handler, Destroy_only<handler>>(
+        get_file_handler(nullptr, ha_thd()->mem_root))->extra_rec_buf_length();
+
   uint max= (*m_file)->extra_rec_buf_length();
 
+  handler **file;
   for (file= m_file, file++; *file; file++)
     if (max < (*file)->extra_rec_buf_length())
       max= (*file)->extra_rec_buf_length();
@@ -5395,9 +5414,15 @@ uint Partition_base::extra_rec_buf_length() const
 
 uint Partition_base::min_record_length(uint options) const
 {
-  handler **file;
+  if (!m_file)
+    return
+      std::unique_ptr<handler, Destroy_only<handler>>(
+        get_file_handler(nullptr, ha_thd()->mem_root))->
+        min_record_length(options);
+
   uint max= (*m_file)->min_record_length(options);
 
+  handler **file;
   for (file= m_file, file++; *file; file++)
     if (max < (*file)->min_record_length(options))
       max= (*file)->min_record_length(options);

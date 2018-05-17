@@ -653,10 +653,10 @@ static handler* tokudb_create_handler(
     bool partitioned,
     MEM_ROOT* mem_root) {
 
-    (void)(partitioned);
-    if (table && table->db_type() == tokudb_hton &&
-        table->partition_info_str && table->partition_info_str_len) {
-//    if (partitioned) {
+//    (void)(partitioned);
+//    if (table && table->db_type() == tokudb_hton &&
+//        table->partition_info_str && table->partition_info_str_len) {
+    if (partitioned) {
         DBUG_ASSERT(partitioned);
         ha_tokupart* file = new (mem_root) ha_tokupart(hton, table);
         if (file && file->init_partitioning(mem_root))

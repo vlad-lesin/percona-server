@@ -7649,8 +7649,16 @@ cleanup:
 }
 
 
-int ha_tokudb::delete_non_partitioned_table(const char* name) {
-
+//
+// Drops table
+// Parameters:
+//      [in]    name - name of table to be deleted
+// Returns:
+//      0 on success
+//      error otherwise
+//
+int ha_tokudb::delete_table(const char* name,
+                            TOKUDB_UNUSED(const dd::Table* table_def)) {
     TOKUDB_HANDLER_DBUG_ENTER("%s", name);
     TOKUDB_SHARE* share = TOKUDB_SHARE::get_share(name, NULL, false);
     if (share) {
@@ -7675,28 +7683,7 @@ int ha_tokudb::delete_non_partitioned_table(const char* name) {
             name);
     }
     TOKUDB_HANDLER_DBUG_RETURN(error);
-}
 
-int ha_tokudb::delete_partitioned_table(const char* name,
-                                        const dd::Table* table_def) {
-    ha_tokupart file(tokudb_hton, nullptr);
-    file.init_partitioning(ha_thd()->mem_root);
-    return file.delete_table(name, table_def);
-}
-
-//
-// Drops table
-// Parameters:
-//      [in]    name - name of table to be deleted
-// Returns:
-//      0 on success
-//      error otherwise
-//
-int ha_tokudb::delete_table(const char* name,
-                            const dd::Table* table_def) {
-    if (table_def->partition_type() == dd::Table::PT_NONE)
-        return delete_non_partitioned_table(name);
-    return delete_partitioned_table(name, table_def);
 }
 
 static bool tokudb_check_db_dir_exist_from_table_name(const char *table_name) {
