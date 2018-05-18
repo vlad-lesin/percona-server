@@ -4,6 +4,38 @@
 
 --let $MYSQLD_DATADIR=`select @@datadir`
 
+create table t1 (a int unsigned not null, primary key(a)) engine=tokudb
+PARTITION BY RANGE (a) (
+    PARTITION p0 VALUES LESS THAN (100),
+    PARTITION p1 VALUES LESS THAN (200),
+    PARTITION p2 VALUES LESS THAN (300),
+    PARTITION p3 VALUES LESS THAN (400)
+);
+
+insert into t1 set a = 250;
+insert into t1 set a = 255;
+insert into t1 set a = 350;
+insert into t1 set a = 355;
+insert into t1 set a = 50;
+insert into t1 set a = 55;
+
+ALTER TABLE t1 ADD COLUMN b INT UNSIGNED;
+SHOW CREATE TABLE t1;
+
+select * from t1;
+
+ALTER TABLE t1 ADD PARTITION (PARTITION p4 VALUES LESS THAN (500));
+ALTER TABLE t1 ADD PARTITION (PARTITION p5 VALUES LESS THAN (600));
+
+insert into t1 set a = 450;
+
+select * from t1;
+
+ALTER TABLE t1 DROP PARTITION p5;
+
+DROP TABLE t1;
+SHOW CREATE TABLE t1;
+
 CREATE TABLE `t1` (
   `f_int1` int(11) DEFAULT NULL,
   `f_int2` int(11) DEFAULT NULL,
@@ -98,5 +130,6 @@ ALTER TABLE t2 RENAME t1;
 
 --list_files $MYSQLD_DATADIR/test *
 select * from t1;
+
 
 

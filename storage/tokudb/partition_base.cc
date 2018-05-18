@@ -1645,7 +1645,6 @@ int Partition_base::del_ren_table(
   int save_error = 0;
   const char *from_path;
   const char *to_path= NULL;
-//  handler **file = m_file;
   char from_lc_buff[FN_REFLEN];
   char to_lc_buff[FN_REFLEN];
   std::unique_ptr<handler, Destroy_only<handler>>
@@ -1689,7 +1688,6 @@ int Partition_base::del_ren_table(
   for (const std::string &from_name : from_names) {
     if (!to) {
       error =
-        // TODO: invoke non-partitioned delete function
         file->ha_delete_table(from_name.c_str(), table_def_from);
       if (error)
         save_error = error;
@@ -1721,93 +1719,6 @@ rename_error:
       nullptr);
   }
   return error;
-
-#if 0
-  const char *from_path;
-  const char *to_path= NULL;
-  char from_lc_buff[FN_REFLEN];
-  char to_lc_buff[FN_REFLEN];
-  int error = 0;
-  int save_error = 0;
-  handler **file = m_file;
-  /*
-    Since Partition_base has HA_FILE_BASED, it must alter underlying table names
-    if they do not have HA_FILE_BASED and lower_case_table_names == 2.
-    See Bug#37402, for Mac OS X.
-    The appended #P#<partname>[#SP#<subpartname>] will remain in current case.
-    Using the first partitions handler, since mixing handlers is not allowed.
-  */
-  from_path= get_canonical_filename(*file, from, from_lc_buff);
-  if (to != NULL)
-    to_path= get_canonical_filename(*file, to, to_lc_buff);
-
-  if (
-    !foreach_partition(
-      [&](const partition_element *parent_part_elem,
-          const partition_element *part_elem)->bool {
-        char from_buff[FN_REFLEN];
-        part_name(from_buff, from_path, parent_part_elem, part_elem);
-        if (!to) {
-          error = (*(file++))->ha_delete_table(from_buff, table_def_from);
-          if (error)
-            save_error = error;
-        }
-        else {
-          char to_buff[FN_REFLEN];
-          part_name(to_buff, to_path, parent_part_elem, part_elem);
-          error= (*(file++))->ha_rename_table(
-            from_buff, to_buff, table_def_from, table_def_to);
-          if (error)
-            return false;
-        }
-        return true;
-      }
-    )
-  )
-    goto rename_error;
-
-  if (!to)
-  {
-    /* Delete the partition-specific files. If error, break.*/
-    if ((error= handler::delete_table(from, table_def_from)))
-      return error;
-  }
-  else {
-    /* Rename the partition-specific files. If error, break.*/
-    if ((error= handler::rename_table(from, to, table_def_from, table_def_to)))
-    {
-      /* Try to revert everything, ignore errors */
-      // TODO: fix for const_cast here
-      (void) handler::rename_table(to, from,
-        table_def_to, const_cast<dd::Table *>(table_def_from));
-      goto rename_error;
-    }
-  }
-
-  return save_error;
-
-rename_error:
-  handler **abort_file = m_file;
-  (void)foreach_partition(
-    [&](const partition_element *parent_part_elem,
-        const partition_element *part_elem)->bool {
-      char from_buff[FN_REFLEN];
-      char to_buff[FN_REFLEN];
-      if (abort_file >= file)
-        return false;
-      /* Revert the rename, back from 'to' to the original 'from' */
-      part_name(from_buff, from_path, parent_part_elem, part_elem);
-      part_name(to_buff, to_path, parent_part_elem, part_elem);
-      /* Ignore error here */
-      // TODO: fix for const_cast here
-      (void) (*(abort_file++))->ha_rename_table(
-        to_buff, from_buff,
-        table_def_to, const_cast<dd::Table *>(table_def_from));
-      return true;
-    }
-  );
-  return error;
-#endif
 }
 
 
@@ -4201,6 +4112,8 @@ int Partition_base::extra(enum ha_extra_function operation)
   case HA_EXTRA_FLUSH:
   case HA_EXTRA_PREPARE_FOR_RENAME:
   case HA_EXTRA_FORCE_REOPEN:
+  case HA_EXTRA_BEGIN_ALTER_COPY:
+  case HA_EXTRA_END_ALTER_COPY:
     DBUG_RETURN(loop_extra(operation));
     break;
 
@@ -5135,15 +5048,12 @@ Partition_base::check_if_supported_inplace_alter(TABLE *altered_table,
   DBUG_RETURN(result);
 }
 
+
 bool Partition_base::prepare_inplace_alter_table(
-      TABLE*, Alter_inplace_info*, const dd::Table*, dd::Table*)
-{
-  DBUG_ASSERT(0);
-  return false; // TODO: NYI
-}
-#if 0
-bool Partition_base::prepare_inplace_alter_table(TABLE *altered_table,
-                                               Alter_inplace_info *ha_alter_info)
+  TABLE *altered_table,
+  Alter_inplace_info *ha_alter_info,
+  const dd::Table* old_table_def,
+  dd::Table* new_table_def)
 {
   uint index= 0;
   bool error= false;
@@ -5155,9 +5065,7 @@ bool Partition_base::prepare_inplace_alter_table(TABLE *altered_table,
     Changing to similar partitioning, only update metadata.
     Non allowed changes would be catched in prep_alter_part_table().
   */
-  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION ||
-      ha_alter_info->alter_info->flags ==
-        Alter_info::ALTER_UPGRADE_PARTITIONING)
+  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION)
     DBUG_RETURN(false);
 
   part_inplace_ctx=
@@ -5167,7 +5075,9 @@ bool Partition_base::prepare_inplace_alter_table(TABLE *altered_table,
   {
     ha_alter_info->handler_ctx= part_inplace_ctx->handler_ctx_array[index];
     if (m_file[index]->ha_prepare_inplace_alter_table(altered_table,
-                                                      ha_alter_info))
+                                                      ha_alter_info,
+                                                      old_table_def,
+                                                      new_table_def))
       error= true;
     part_inplace_ctx->handler_ctx_array[index]= ha_alter_info->handler_ctx;
   }
@@ -5175,17 +5085,13 @@ bool Partition_base::prepare_inplace_alter_table(TABLE *altered_table,
 
   DBUG_RETURN(error);
 }
-#endif
+
 
 bool Partition_base::inplace_alter_table(
-  TABLE*, Alter_inplace_info*, const dd::Table*, dd::Table*)
-{
-  DBUG_ASSERT(0);
-  return false; // TODO: NYI
-}
-#if 0
-bool Partition_base::inplace_alter_table(TABLE *altered_table,
-                                       Alter_inplace_info *ha_alter_info)
+  TABLE *altered_table,
+  Alter_inplace_info *ha_alter_info,
+  const dd::Table* old_table_def,
+  dd::Table* new_table_def)
 {
   uint index= 0;
   bool error= false;
@@ -5197,9 +5103,7 @@ bool Partition_base::inplace_alter_table(TABLE *altered_table,
     Changing to similar partitioning, only update metadata.
     Non allowed changes would be catched in prep_alter_part_table().
   */
-  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION ||
-      ha_alter_info->alter_info->flags ==
-        Alter_info::ALTER_UPGRADE_PARTITIONING)
+  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION)
     DBUG_RETURN(false);
 
   part_inplace_ctx=
@@ -5209,7 +5113,9 @@ bool Partition_base::inplace_alter_table(TABLE *altered_table,
   {
     ha_alter_info->handler_ctx= part_inplace_ctx->handler_ctx_array[index];
     if (m_file[index]->ha_inplace_alter_table(altered_table,
-                                              ha_alter_info))
+                                              ha_alter_info,
+                                              old_table_def,
+                                              new_table_def))
       error= true;
     part_inplace_ctx->handler_ctx_array[index]= ha_alter_info->handler_ctx;
   }
@@ -5217,7 +5123,7 @@ bool Partition_base::inplace_alter_table(TABLE *altered_table,
 
   DBUG_RETURN(error);
 }
-#endif
+
 
 /*
   Note that this function will try rollback failed ADD INDEX by
@@ -5226,16 +5132,13 @@ bool Partition_base::inplace_alter_table(TABLE *altered_table,
   engine must be able to drop index in-place with X-lock held.
   (As X-lock will be held here if new indexes are to be committed)
 */
+
 bool Partition_base::commit_inplace_alter_table(
-  TABLE*, Alter_inplace_info*, bool, const dd::Table*, dd::Table*)
-{
-  DBUG_ASSERT(0);
-  return false; // TODO: NYI
-}
-#if 0
-bool Partition_base::commit_inplace_alter_table(TABLE *altered_table,
-                                              Alter_inplace_info *ha_alter_info,
-                                              bool commit)
+  TABLE *altered_table,
+  Alter_inplace_info *ha_alter_info,
+  bool commit,
+  const dd::Table* old_table_def,
+  dd::Table* new_table_def)
 {
   Partition_base_inplace_ctx *part_inplace_ctx;
   bool error= false;
@@ -5246,9 +5149,7 @@ bool Partition_base::commit_inplace_alter_table(TABLE *altered_table,
     Changing to similar partitioning, only update metadata.
     Non allowed changes would be catched in prep_alter_part_table().
   */
-  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION ||
-      ha_alter_info->alter_info->flags ==
-        Alter_info::ALTER_UPGRADE_PARTITIONING)
+  if (ha_alter_info->alter_info->flags == Alter_info::ALTER_PARTITION)
     DBUG_RETURN(false);
 
   part_inplace_ctx=
@@ -5260,7 +5161,10 @@ bool Partition_base::commit_inplace_alter_table(TABLE *altered_table,
                 part_inplace_ctx->handler_ctx_array);
     ha_alter_info->handler_ctx= part_inplace_ctx->handler_ctx_array[0];
     error= m_file[0]->ha_commit_inplace_alter_table(altered_table,
-                                                    ha_alter_info, commit);
+                                                    ha_alter_info,
+                                                    commit,
+                                                    old_table_def,
+                                                    new_table_def);
     if (error)
       goto end;
     if (ha_alter_info->group_commit_ctx)
@@ -5280,7 +5184,9 @@ bool Partition_base::commit_inplace_alter_table(TABLE *altered_table,
         ha_alter_info->handler_ctx= part_inplace_ctx->handler_ctx_array[i];
         error|= m_file[i]->ha_commit_inplace_alter_table(altered_table,
                                                          ha_alter_info,
-                                                         true);
+                                                         true,
+                                                         old_table_def,
+                                                         new_table_def);
       }
     }
   }
@@ -5292,7 +5198,10 @@ bool Partition_base::commit_inplace_alter_table(TABLE *altered_table,
       /* Rollback, commit == false,  is done for each partition! */
       ha_alter_info->handler_ctx= part_inplace_ctx->handler_ctx_array[i];
       if (m_file[i]->ha_commit_inplace_alter_table(altered_table,
-                                                   ha_alter_info, false))
+                                                   ha_alter_info,
+                                                   false,
+                                                   old_table_def,
+                                                   new_table_def))
         error= true;
     }
   }
@@ -5301,7 +5210,7 @@ end:
 
   DBUG_RETURN(error);
 }
-#endif
+
 
 void Partition_base::notify_table_changed(Alter_inplace_info* aii)
 {
