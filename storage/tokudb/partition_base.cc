@@ -881,16 +881,6 @@ int Partition_base::analyze(THD *thd, HA_CHECK_OPT *check_opt)
 
   int result= handle_opt_partitions(thd, check_opt, ANALYZE_PARTS);
 
-  DBUG_ASSERT(0);
-  if ((result == 0) && m_file[0])
-// TODO: check for this flag necessary
-//      && (m_file[0]->ha_table_flags() & HA_ONLINE_ANALYZE))
-  {
-    /* If this is ANALYZE TABLE that will not force table definition cache
-       eviction, update statistics for the partition handler. */
-    this->info(HA_STATUS_CONST | HA_STATUS_VARIABLE | HA_STATUS_NO_LOCK);
-  }
-
   DBUG_RETURN(result);
 }
 
@@ -935,6 +925,26 @@ int Partition_base::repair(THD *thd, HA_CHECK_OPT *check_opt)
 
   DBUG_RETURN(handle_opt_partitions(thd, check_opt, REPAIR_PARTS));
 }
+
+/**
+  Get checksum for table.
+
+  @return Checksum or 0 if not supported, which also may be a correct checksum!.
+*/
+// ported from 5.7 Partition_helper::ph_checksum()
+ha_checksum Partition_base::checksum() const
+{
+  ha_checksum sum= 0;
+  if (ha_table_flags() & HA_HAS_CHECKSUM)
+  {
+    for (uint i= 0; i < m_tot_parts; i++)
+    {
+      sum+= checksum_in_part(i);
+    }
+  }
+  return sum;
+}
+
 
 /**
   Assign to keycache
@@ -2165,7 +2175,7 @@ int Partition_base::open(
   DBUG_RETURN(0);
 
 err_handler:
-//  DEBUG_SYNC(ha_thd(), "partition_open_error");
+  DEBUG_SYNC(ha_thd(), "partition_open_error");
   while (file-- != m_file)
     (*file)->ha_close();
 err_alloc:
@@ -2710,13 +2720,7 @@ int Partition_base::delete_all_rows()
   @retval  > 0  Error code.
 */
 
-int Partition_base::truncate(dd::Table*)
-{
-  DBUG_ASSERT(0);
-  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-}
-#if 0
-int Partition_base::truncate()
+int Partition_base::truncate(dd::Table *table_def)
 {
   int error;
   handler **file;
@@ -2738,12 +2742,11 @@ int Partition_base::truncate()
   file= m_file;
   do
   {
-    if ((error= (*file)->ha_truncate()))
+    if ((error= (*file)->ha_truncate(table_def)))
       DBUG_RETURN(error);
   } while (*(++file));
   DBUG_RETURN(0);
 }
-#endif
 
 /**
   Truncate a set of specific partitions.
@@ -2752,13 +2755,7 @@ int Partition_base::truncate()
 
   ALTER TABLE t TRUNCATE PARTITION ...
 */
-int Partition_base::truncate_partition_low(dd::Table*)
-{
-  DBUG_ASSERT(0);
-  return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-}
-#if 0
-int Partition_base::truncate_partition_low()
+int Partition_base::truncate_partition_low(dd::Table *table_def)
 {
   int error= 0;
   List_iterator<partition_element> part_it(m_part_info->partitions);
@@ -2782,7 +2779,7 @@ int Partition_base::truncate_partition_low()
        i= m_part_info->get_next_used_partition(i))
   {
     DBUG_PRINT("info", ("truncate partition %u", i));
-    if ((error= m_file[i]->ha_truncate()))
+    if ((error= m_file[i]->ha_truncate(table_def)))
       break;
   }
   if (error)
@@ -2792,7 +2789,6 @@ int Partition_base::truncate_partition_low()
   }
   DBUG_RETURN(error);
 }
-#endif
 
 /*
   Start a large batch of insert rows
@@ -4884,17 +4880,17 @@ handler::Table_flags Partition_base::table_flags() const
 {
   uint first_used_partition= 0;
   DBUG_ENTER("Partition_base::table_flags");
-
+/*
   if (m_handler_status < handler_initialized ||
       m_handler_status >= handler_closed)
     DBUG_RETURN(PARTITION_ENABLED_TABLE_FLAGS);
-
+*/
   if (!m_file) {
     std::unique_ptr<handler, Destroy_only<handler>>
       file(get_file_handler(nullptr, ha_thd()->mem_root));
-      return (file->ha_table_flags() &
+      DBUG_RETURN ((file->ha_table_flags() &
         ~(PARTITION_DISABLED_TABLE_FLAGS)) |
-        (PARTITION_ENABLED_TABLE_FLAGS);
+        (PARTITION_ENABLED_TABLE_FLAGS));
   }
 
   if (get_lock_type() != F_UNLCK)

@@ -507,9 +507,6 @@ bool Sql_cmd_alter_table_exchange_partition::
   if (ha_error)
   {
     part_table->file->print_error(ha_error, MYF(0));
-    // Close TABLE instances which marked as old earlier.
-    close_all_tables_for_name(thd, swap_table->s, false, NULL);
-    close_all_tables_for_name(thd, part_table->s, false, NULL);
     /*
       Rollback all possible changes to data-dictionary and SE which
       Partition_handler::exchange_partitions() might have done before
@@ -526,6 +523,13 @@ bool Sql_cmd_alter_table_exchange_partition::
     if ((part_table->file->ht->flags & HTON_SUPPORTS_ATOMIC_DDL) &&
         part_table->file->ht->post_ddl)
       part_table->file->ht->post_ddl(thd);
+    /*
+      Close TABLE instances which marked as old earlier.
+      Fix for bug #91012, i.e. call close_all_tables_for_name(...)
+      after part_table->file is used to avoid null pointer dereferencing.
+    */
+    close_all_tables_for_name(thd, swap_table->s, false, NULL);
+    close_all_tables_for_name(thd, part_table->s, false, NULL);
     (void) thd->locked_tables_list.reopen_tables(thd);
     DBUG_RETURN(true);
   }

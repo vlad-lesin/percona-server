@@ -546,11 +546,9 @@ public:
   {
     return Partition_helper::ph_index_last(buf);
   }
-  int index_next_same(uchar * /*buf*/, const uchar * /*key*/, uint  /*keylen*/)
+  int index_next_same(uchar *buf, const uchar * /*key*/, uint keylen)
   {
-//    return Partition_helper::ph_index_next_same(buf, key, keylen);
-    DBUG_ASSERT(0);
-    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
+    return Partition_helper::ph_index_next_same(buf, keylen);
   }
   int index_read_last_map(uchar *buf,
                           const uchar *key,
@@ -1139,12 +1137,8 @@ public:
     virtual int dump(THD* thd, int fd = -1);
     virtual int net_read_dump(NET* net);
   */
-  ha_checksum checksum() const
-  {
-//    return Partition_helper::ph_checksum();
-    DBUG_ASSERT(0);
-    return HA_ADMIN_NOT_IMPLEMENTED; // TODO: NYI
-  }
+  ha_checksum checksum() const;
+
   /* Enabled keycache for performance reasons, WL#4571 */
     virtual int assign_to_keycache(THD* thd, HA_CHECK_OPT *check_opt);
     virtual int preload_keys(THD* thd, HA_CHECK_OPT* check_opt);
