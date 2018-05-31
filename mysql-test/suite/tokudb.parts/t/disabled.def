@@ -1,2 +1,13 @@
 partition_basic_symlink_tokudb : tokudb_file_per_table is not supported
 partition_reorganize_tokudb : tokudb_file_per_table is not supported
+partition_exchange_tokudb : exchange partition is not supported
+partition_exch_qa_1_tokudb : exchange partition is not supported
+partition_exch_qa_4_tokudb : exchange partition is not supported
+partition_exch_qa_5_tokudb : exchange partition is not supported
+partition_exch_qa_7_tokudb : exchange partition is not supported
+partition_exch_qa_8_tokudb : exchange partition is not supported
+partition_exch_tokudb : exchange partition is not supported
+partition_mgm_lc0_tokudb : exchange partition is not supported
+
+
+
