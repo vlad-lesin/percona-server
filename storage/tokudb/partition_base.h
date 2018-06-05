@@ -61,7 +61,7 @@ private:
 private:
   /* Data for the partition handler */
   int  m_mode;                          // Open mode
-//  uint m_open_test_lock;                // Open test_if_locked
+  uint m_open_test_lock;                // Open test_if_locked
 protected: // Allow engine-specific handlers to access to the partitions array.
   handler **m_file;                     // Array of references to handler inst.
 private:
@@ -247,11 +247,11 @@ private:
   int prepare_for_new_partitions(uint num_partitions);//,
 //                                 bool only_create);
 // TODO: check if the function is necessary
-//  int create_new_partition(TABLE *table,
-//                           HA_CREATE_INFO *create_info,
-//                           const char *part_name,
-//                           uint new_part_id,
-//                           partition_element *p_elem);
+  int create_new_partition(TABLE *table,
+                           HA_CREATE_INFO *create_info,
+                           const char *part_name,
+                           uint new_part_id,
+                           partition_element *p_elem);
   int write_row_in_new_part(uint part_id);
   void close_new_partitions();
   /*
@@ -1084,9 +1084,23 @@ public:
 //    virtual bool commit_inplace_alter_table(TABLE *altered_table,
 //                                            Alter_inplace_info *ha_alter_info,
 //                                            bool commit);
+    bool inplace_alter_partition(TABLE* altered_table,
+                                 Alter_inplace_info* ha_alter_info,
+                                 const dd::Table* old_dd_tab,
+                                 dd::Table* new_dd_tab);
+
+    int change_partitions(HA_CREATE_INFO *create_info,
+                          const char *path,
+                          //ulonglong * const copied,
+                          ulonglong * const deleted);
+
     virtual bool commit_inplace_alter_table(
       TABLE*, Alter_inplace_info*,
-      bool, const dd::Table*, dd::Table*); // TODO: NYI
+      bool, const dd::Table*, dd::Table*);
+    bool commit_inplace_alter_partition(
+      TABLE*, Alter_inplace_info*,
+      bool, const dd::Table*, dd::Table*);
+
 //    virtual void notify_table_changed();
     virtual void notify_table_changed(Alter_inplace_info*); //TODO: NYI
 

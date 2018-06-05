@@ -108,6 +108,14 @@ using std::max;
                                         HA_CAN_FULLTEXT | \
                                         HA_DUPLICATE_POS | \
                                         HA_READ_BEFORE_WRITE_REMOVAL)
+
+enum part_name_variant {
+  NORMAL_PART_NAME,
+  TEMP_PART_NAME
+//  RENAMED_PART_NAME
+};
+
+
 /** operation names for the enum_part_operation. */
 static const char *opt_op_name[]= {"optimize", "analyze", "check", "repair",
                                    "assign_to_keycache", "preload_keys"};
@@ -120,13 +128,19 @@ static PSI_memory_key key_memory_Partition_base_engine_array;
 static PSI_memory_key key_memory_Partition_base_part_ids;
 PSI_file_key key_file_Partition_base_par;
 
+// TODO: make is static for 5.7 too
+static
 void part_name(char *out_buf,
                const char *path,
                const char *parent_elem_name,
-               const char *elem_name) {
+               const char *elem_name,
+               part_name_variant name_variant= NORMAL_PART_NAME) {
 
   static const char *sp_prefix = "#SP#";
   static const size_t sp_prefix_length = 4;
+
+  static const char *tmp_prefix = "#TMP#";
+  static const size_t tmp_prefix_length = 5;
 
   char part_name[FN_REFLEN];
   size_t part_name_length =
@@ -145,6 +159,12 @@ void part_name(char *out_buf,
     strncat(part_name, subpart_name,
       sizeof(part_name) - part_name_length - 1);
     part_name_length += subpart_name_length;
+  }
+
+  if (name_variant == TEMP_PART_NAME) {
+    DBUG_ASSERT(part_name_length + tmp_prefix_length < sizeof(part_name));
+    strncat(part_name, tmp_prefix, sizeof(part_name) - part_name_length - 1);
+    part_name_length += tmp_prefix_length;
   }
 
   create_partition_name(out_buf, path, part_name, FALSE);
@@ -417,7 +437,7 @@ void Partition_base::init_handler_variables()
 {
   active_index= MAX_KEY;
   m_mode= 0;
-//  m_open_test_lock= 0;
+  m_open_test_lock= 0;
   m_file= NULL;
   m_file_tot_parts= 0;
   m_tot_parts= 0;
@@ -1286,12 +1306,11 @@ int Partition_base::prepare_for_new_partitions(uint num_partitions)//,
     @retval >0  Error
 */
 // TODO: check if the functions is necessary
-#if 0
 int Partition_base::create_new_partition(TABLE *tbl,
                                        HA_CREATE_INFO *create_info,
                                        const char *part_name,
                                        uint new_part_id,
-                                       partition_element *p_elem)
+                                       partition_element * /*p_elem*/)
 {
   int error;
   THD *thd= ha_thd();
@@ -1333,7 +1352,7 @@ int Partition_base::create_new_partition(TABLE *tbl,
     DBUG_RETURN(HA_ERR_INITIALIZATION);
   }
 
-  if ((error= file->ha_create(part_name, tbl, create_info)))
+  if ((error= file->ha_create(part_name, tbl, create_info, nullptr)))
   {
     /*
       Added for safety, InnoDB reports HA_ERR_FOUND_DUPP_KEY
@@ -1347,8 +1366,7 @@ int Partition_base::create_new_partition(TABLE *tbl,
     goto error_create;
   }
   DBUG_PRINT("info", ("partition %s created", part_name));
-  if ((error= file->ha_open(tbl, part_name, m_mode,
-                            m_open_test_lock | HA_OPEN_NO_PSI_CALL)))
+  if ((error= file->ha_open(tbl, part_name, m_mode, m_open_test_lock, nullptr)))
   {
     goto error_open;
   }
@@ -1376,11 +1394,10 @@ int Partition_base::create_new_partition(TABLE *tbl,
 error_external_lock:
   (void) file->ha_close();
 error_open:
-  (void) file->ha_delete_table(part_name);
+  (void) file->ha_delete_table(part_name, nullptr);
 error_create:
   DBUG_RETURN(error);
 }
-#endif
 
 #define tmp_disable_binlog(A)       \
   {ulonglong tmp_disable_binlog__save_options= (A)->variables.option_bits; \
@@ -1983,7 +2000,6 @@ bool Partition_base::init_partition_bitmaps()
 int Partition_base::open(
   const char *name, int mode, uint test_if_locked, const dd::Table *table_def)
 {
-//int Partition_base::open(const char *name, int mode, uint test_if_locked)
   int error= HA_ERR_INITIALIZATION;
   handler **file;
   ulonglong check_table_flags;
@@ -1993,7 +2009,7 @@ int Partition_base::open(
   DBUG_ASSERT(m_part_info);
   ref_length= 0;
   m_mode= mode;
-//  m_open_test_lock= test_if_locked;
+  m_open_test_lock= test_if_locked;
 
   /* The following functions must be called only after m_part_info set */
   if (initialize_partition(&table_share->mem_root) ||
@@ -5082,6 +5098,592 @@ bool Partition_base::prepare_inplace_alter_table(
   DBUG_RETURN(error);
 }
 
+static inline bool part_apply_to(
+  const Alter_inplace_info*	ha_alter_info)
+{
+
+	/** Operations that the native partitioning can perform inplace */
+	static constexpr Alter_inplace_info::HA_ALTER_FLAGS	OPERATIONS =
+		Alter_inplace_info::ADD_PARTITION
+		| Alter_inplace_info::DROP_PARTITION
+		| Alter_inplace_info::ALTER_REBUILD_PARTITION
+		| Alter_inplace_info::COALESCE_PARTITION
+		| Alter_inplace_info::REORGANIZE_PARTITION;
+
+  return((ha_alter_info->handler_flags & OPERATIONS) != 0);
+}
+
+
+/** Determine if copying data between partitions is necessary
+@param[in]	ha_alter_info	thd DDL operation
+@return whether it is necessary to copy data */
+static inline bool part_need_copy(const Alter_inplace_info* ha_alter_info)
+{
+  DBUG_ASSERT(part_apply_to(ha_alter_info));
+
+  /* Basically, only DROP PARTITION, ADD PARTITION for RANGE/LIST
+  partitions don't require copying data between partitions */
+  if (ha_alter_info->handler_flags
+      & Alter_inplace_info::ADD_PARTITION) {
+    switch (ha_alter_info->modified_part_info->part_type) {
+    case partition_type::RANGE:
+    case partition_type::LIST:
+      return(false);
+    default:
+      break;
+    }
+  }
+
+  return(!(ha_alter_info->handler_flags
+     & (Alter_inplace_info::DROP_PARTITION)));
+}
+
+
+/**
+  Implement the partition changes defined by ALTER TABLE of partitions.
+
+  Add and copy if needed a number of partitions, during this operation
+  only read operation is ongoing in the server. This is used by
+  ADD PARTITION all types as well as by REORGANIZE PARTITION. For
+  one-phased implementations it is used also by DROP and COALESCE
+  PARTITIONs.
+  One-phased implementation needs the new frm file, other handlers will
+  get zero length and a NULL reference here.
+
+  @param[in]  create_info       HA_CREATE_INFO object describing all
+                                fields and indexes in table
+  @param[in]  path              Complete path of db and table name
+  @param[out] copied            Output parameter where number of copied
+                                records are added
+  @param[out] deleted           Output parameter where number of deleted
+                                records are added
+
+  @return Operation status
+    @retval    0 Success
+    @retval != 0 Failure
+*/
+
+int Partition_base::change_partitions(HA_CREATE_INFO *create_info,
+                                        const char *path,
+                                        //ulonglong * const copied,
+                                        ulonglong * const deleted)
+{
+  List_iterator<partition_element> part_it(m_part_info->partitions);
+  List_iterator <partition_element> t_it(m_part_info->temp_partitions);
+  char part_name_buff[FN_REFLEN];
+  const char *table_level_data_file_name= create_info->data_file_name;
+  const char *table_level_index_file_name= create_info->index_file_name;
+  const char *table_level_tablespace_name= create_info->tablespace;
+  uint num_parts= m_part_info->partitions.elements;
+  uint num_subparts= m_part_info->num_subparts;
+  uint i= 0;
+  uint num_remain_partitions;
+  uint num_reorged_parts;
+  int error= 1;
+  bool first;
+  uint temp_partitions= m_part_info->temp_partitions.elements;
+  //THD *thd= get_thd();
+  DBUG_ENTER("Partition_helper::change_partitions");
+
+  /*
+    Use the read_partitions bitmap for reorganized partitions,
+    i.e. what to copy.
+  */
+  bitmap_clear_all(&m_part_info->read_partitions);
+
+  /*
+    Assert that it works without HA_FILE_BASED and lower_case_table_name = 2.
+  */
+  DBUG_ASSERT(!strcmp(path, get_canonical_filename(this, path,
+                                                   part_name_buff)));
+  num_reorged_parts= 0;
+  if (!m_part_info->is_sub_partitioned())
+    num_subparts= 1;
+
+  /*
+    Step 1:
+      Calculate number of reorganized partitions.
+  */
+  if (temp_partitions)
+  {
+    num_reorged_parts= temp_partitions * num_subparts;
+  }
+  else
+  {
+    do
+    {
+      partition_element *part_elem= part_it++;
+      if (part_elem->part_state == PART_CHANGED ||
+          part_elem->part_state == PART_REORGED_DROPPED)
+      {
+        num_reorged_parts+= num_subparts;
+      }
+    } while (++i < num_parts);
+  }
+
+  /*
+    Step 2:
+      Calculate number of partitions after change.
+  */
+  num_remain_partitions= 0;
+  if (temp_partitions)
+  {
+    num_remain_partitions= num_parts * num_subparts;
+  }
+  else
+  {
+    part_it.rewind();
+    i= 0;
+    do
+    {
+      partition_element *part_elem= part_it++;
+      if (part_elem->part_state == PART_NORMAL ||
+          part_elem->part_state == PART_TO_BE_ADDED ||
+          part_elem->part_state == PART_CHANGED)
+      {
+        num_remain_partitions+= num_subparts;
+      }
+    } while (++i < num_parts);
+  }
+
+  /*
+    Step 3:
+      Set the read_partition bit for all partitions to be copied.
+  */
+  if (num_reorged_parts)
+  {
+    i= 0;
+    first= true;
+    part_it.rewind();
+    do
+    {
+      partition_element *part_elem= part_it++;
+      if (part_elem->part_state == PART_CHANGED ||
+          part_elem->part_state == PART_REORGED_DROPPED)
+      {
+        for (uint sp = 0; sp < num_subparts; sp++)
+        {
+          bitmap_set_bit(&m_part_info->read_partitions, i * num_subparts + sp);
+        }
+        DBUG_ASSERT(first);
+      }
+      else if (first && temp_partitions &&
+               part_elem->part_state == PART_TO_BE_ADDED)
+      {
+        /*
+          When doing an ALTER TABLE REORGANIZE PARTITION a number of
+          partitions is to be reorganized into a set of new partitions.
+          The reorganized partitions are in this case in the temp_partitions
+          list. We mark all of them in one batch and thus we only do this
+          until we find the first partition with state PART_TO_BE_ADDED
+          since this is where the new partitions go in and where the old
+          ones used to be.
+        */
+        first= false;
+        DBUG_ASSERT(((i*num_subparts) + num_reorged_parts) <= m_tot_parts);
+        for (uint sp = 0; sp < num_reorged_parts; sp++)
+        {
+          bitmap_set_bit(&m_part_info->read_partitions, i * num_subparts + sp);
+        }
+      }
+    } while (++i < num_parts);
+  }
+
+  /*
+    Step 4:
+      Create the new partitions and also open, lock and call
+      external_lock on them (if needed) to prepare them for copy phase
+      and also for later close calls.
+      No need to create PART_NORMAL partitions since they must not
+      be written to!
+      Only PART_CHANGED and PART_TO_BE_ADDED should be written to!
+  */
+
+  error= prepare_for_new_partitions(num_remain_partitions);
+
+  i= 0;
+  part_it.rewind();
+  do
+  {
+    partition_element *part_elem= part_it++;
+    DBUG_ASSERT(part_elem->part_state >= PART_NORMAL &&
+                part_elem->part_state <= PART_CHANGED);
+    if (part_elem->part_state == PART_TO_BE_ADDED ||
+        part_elem->part_state == PART_CHANGED)
+    {
+      /*
+        A new partition needs to be created PART_TO_BE_ADDED means an
+        entirely new partition and PART_CHANGED means a changed partition
+        that will still exist with either more or less data in it.
+      */
+/*
+      if (part_elem->part_state == PART_CHANGED ||
+          (part_elem->part_state == PART_TO_BE_ADDED && temp_partitions))
+        name_variant= TEMP_PART_NAME;
+*/
+      if (m_part_info->is_sub_partitioned())
+      {
+        List_iterator<partition_element> sub_it(part_elem->subpartitions);
+        uint j= 0, part;
+        do
+        {
+          partition_element *sub_elem= sub_it++;
+          create_subpartition_name(part_name_buff, path,
+                                   part_elem->partition_name,
+                                   sub_elem->partition_name);
+          part= i * num_subparts + j;
+          DBUG_PRINT("info", ("Add subpartition %s", part_name_buff));
+          /*
+            update_create_info was called previously in
+            mysql_prepare_alter_table. Which may have set data/index_file_name
+            for the partitions to the full partition name, including
+            '#P#<part_name>[#SP#<subpart_name>] suffix. Remove that suffix
+            if it exists.
+          */
+          truncate_partition_filename(&m_table->mem_root,
+                                      &sub_elem->data_file_name);
+          truncate_partition_filename(&m_table->mem_root,
+                                      &sub_elem->index_file_name);
+          /* Notice that sub_elem is already based on part_elem's defaults. */
+/*
+          error= set_up_table_before_create(thd,
+                                            m_table->s,
+                                            part_name_buff,
+                                            create_info,
+                                            sub_elem);
+*/
+          if (error)
+          {
+            goto err;
+          }
+          if ((error= create_new_partition(m_table,
+                                           create_info,
+                                           part_name_buff,
+                                           part,
+                                           sub_elem)))
+          {
+            goto err;
+          }
+          /* Reset create_info to table level values. */
+          create_info->data_file_name= table_level_data_file_name;
+          create_info->index_file_name= table_level_index_file_name;
+          create_info->tablespace= table_level_tablespace_name;
+        } while (++j < num_subparts);
+      }
+      else
+      {
+        create_partition_name(part_name_buff, path,
+                              part_elem->partition_name,
+                              true);
+        DBUG_PRINT("info", ("Add partition %s", part_name_buff));
+        /* See comment in subpartition branch above! */
+        truncate_partition_filename(&m_table->mem_root,
+                                    &part_elem->data_file_name);
+        truncate_partition_filename(&m_table->mem_root,
+                                    &part_elem->index_file_name);
+/*
+        error= set_up_table_before_create(thd,
+                                          m_table->s,
+                                          part_name_buff,
+                                          create_info,
+                                          part_elem);
+*/
+        if (error)
+        {
+          goto err;
+        }
+        if ((error= create_new_partition(m_table,
+                                         create_info,
+                                         (const char *)part_name_buff,
+                                         i,
+                                         part_elem)))
+        {
+          goto err;
+        }
+        /* Reset create_info to table level values. */
+        create_info->data_file_name= table_level_data_file_name;
+        create_info->index_file_name= table_level_index_file_name;
+        create_info->tablespace= table_level_tablespace_name;
+      }
+    }
+  } while (++i < num_parts);
+
+  /*
+    Step 5:
+      State update to prepare for next write of the frm file.
+  */
+  i= 0;
+  part_it.rewind();
+  do
+  {
+    partition_element *part_elem= part_it++;
+    if (part_elem->part_state == PART_TO_BE_ADDED)
+      part_elem->part_state= PART_IS_ADDED;
+    else if (part_elem->part_state == PART_CHANGED)
+      part_elem->part_state= PART_IS_CHANGED;
+    else if (part_elem->part_state == PART_REORGED_DROPPED)
+      part_elem->part_state= PART_TO_BE_DROPPED;
+  } while (++i < num_parts);
+  for (i= 0; i < temp_partitions; i++)
+  {
+    partition_element *part_elem= t_it++;
+    DBUG_ASSERT(part_elem->part_state == PART_TO_BE_REORGED);
+    part_elem->part_state= PART_TO_BE_DROPPED;
+  }
+  error= copy_partitions(deleted);
+err:
+  if (error)
+  {
+    print_error(error, MYF(error != ER_OUTOFMEMORY ? 0 : ME_FATALERROR));
+  }
+  /*
+    Close and unlock the new temporary partitions.
+    They will later be deleted or renamed through the ddl-log.
+  */
+  close_new_partitions();
+  DBUG_RETURN(error);
+}
+
+
+
+/** Alter the table structure in-place with operations
+specified using HA_ALTER_FLAGS and Alter_inplace_information.
+This is for 'ALTER TABLE ... PARTITION' and a corresponding function
+to inplace_alter_table().
+The level of concurrency allowed during this operation depends
+on the return value from check_if_supported_inplace_alter().
+
+@param[in,out]	altered_table	TABLE object for new version of table
+@param[in,out]	ha_alter_info	Structure describing changes to be done
+				by ALTER TABLE and holding data used during
+				in-place alter.
+@param[in]	old_dd_tab	Table definition before the ALTER
+@param[in,out]	new_dd_tab	Table definition after the ALTER
+@retval true	Failure
+@retval false	Success */
+bool
+Partition_base::inplace_alter_partition(
+	TABLE*			/*altered_table*/,
+	Alter_inplace_info*	ha_alter_info,
+	const dd::Table*	/*old_dd_tab*/,
+	dd::Table*		/*new_dd_tab*/)
+{
+	if (!part_need_copy(ha_alter_info)) {
+		return(false);
+	}
+
+  const char *table_level_data_file_name=
+    ha_alter_info->create_info->data_file_name;
+  const char *table_level_index_file_name=
+    ha_alter_info->create_info->index_file_name;
+  const char *table_level_tablespace_name=
+    ha_alter_info->create_info->tablespace;
+
+	prepare_change_partitions();
+
+	partition_info *old_part_info= table->part_info;
+
+	set_part_info(ha_alter_info->modified_part_info, true);
+
+	prepare_change_partitions();
+
+	ulonglong	deleted;
+	int		res;
+
+  List_iterator<partition_element> part_it(m_part_info->partitions);
+  uint num_parts= m_part_info->partitions.elements;
+  uint num_subparts=
+    m_part_info->is_sub_partitioned() ?
+    m_part_info->num_subparts :
+    1;
+  uint temp_partitions= m_part_info->temp_partitions.elements;
+  uint num_remain_partitions= 0;
+  uint i= 0;
+
+  if (temp_partitions)
+  {
+    num_remain_partitions= num_parts * num_subparts;
+  }
+  else
+  {
+    do
+    {
+      partition_element *part_elem= part_it++;
+      if (part_elem->part_state == PART_NORMAL ||
+          part_elem->part_state == PART_TO_BE_ADDED ||
+          part_elem->part_state == PART_CHANGED)
+      {
+        num_remain_partitions+= num_subparts;
+      }
+    } while (++i < num_parts);
+  }
+
+
+  res= prepare_for_new_partitions(num_remain_partitions);
+
+	set_part_info(old_part_info, false);
+
+  if (res > 0)
+    goto error;
+  i= 0;
+  part_it.rewind();
+
+  char path[FN_REFLEN+1];
+  build_table_filename(path,
+                       sizeof(path) - 1,
+                       m_table->s->db.str,
+                       m_table->s->table_name.str,
+                       "",
+                       0);
+
+
+  do
+  {
+    partition_element *part_elem= part_it++;
+    DBUG_ASSERT(part_elem->part_state >= PART_NORMAL &&
+                part_elem->part_state <= PART_CHANGED);
+    if (part_elem->part_state == PART_TO_BE_ADDED ||
+        part_elem->part_state == PART_CHANGED)
+    {
+      /*
+        A new partition needs to be created PART_TO_BE_ADDED means an
+        entirely new partition and PART_CHANGED means a changed partition
+        that will still exist with either more or less data in it.
+      */
+/*
+      if (part_elem->part_state == PART_CHANGED ||
+          (part_elem->part_state == PART_TO_BE_ADDED && temp_partitions))
+        name_variant= TEMP_PART_NAME;
+*/
+      char part_name_buff[FN_REFLEN];
+
+      if (m_part_info->is_sub_partitioned())
+      {
+        List_iterator<partition_element> sub_it(part_elem->subpartitions);
+        uint j= 0, part;
+        do
+        {
+          partition_element *sub_elem= sub_it++;
+/*
+          create_subpartition_name(part_name_buff, path,
+                                   part_elem->partition_name,
+                                   sub_elem->partition_name);
+*/
+          part= i * num_subparts + j;
+          DBUG_PRINT("info", ("Add subpartition %s", part_name_buff));
+          /*
+            update_create_info was called previously in
+            mysql_prepare_alter_table. Which may have set data/index_file_name
+            for the partitions to the full partition name, including
+            '#P#<part_name>[#SP#<subpart_name>] suffix. Remove that suffix
+            if it exists.
+          */
+/*
+          truncate_partition_filename(&m_table->mem_root,
+                                      &sub_elem->data_file_name);
+          truncate_partition_filename(&m_table->mem_root,
+                                      &sub_elem->index_file_name);
+*/
+          /* Notice that sub_elem is already based on part_elem's defaults. */
+/*
+          error= set_up_table_before_create(thd,
+                                            m_table->s,
+                                            part_name_buff,
+                                            create_info,
+                                            sub_elem);
+          if (error)
+          {
+            goto err;
+          }
+*/
+          part_name(part_name_buff,
+                    path,
+                    part_elem->partition_name,
+                    sub_elem->partition_name,
+                    TEMP_PART_NAME);
+
+          if ((res= create_new_partition(m_table,
+                                         ha_alter_info->create_info,
+                                           part_name_buff,
+                                           part,
+                                           sub_elem)))
+          {
+            goto error;
+          }
+          /* Reset create_info to table level values. */
+          ha_alter_info->create_info->data_file_name=
+            table_level_data_file_name;
+          ha_alter_info->create_info->index_file_name=
+            table_level_index_file_name;
+          ha_alter_info->create_info->tablespace=
+            table_level_tablespace_name;
+        } while (++j < num_subparts);
+      }
+      else
+      {
+/*
+        create_partition_name(part_name_buff, path,
+                              part_elem->partition_name,
+                              true);
+*/
+        DBUG_PRINT("info", ("Add partition %s", part_name_buff));
+        /* See comment in subpartition branch above! */
+/*
+        truncate_partition_filename(&m_table->mem_root,
+                                    &part_elem->data_file_name);
+        truncate_partition_filename(&m_table->mem_root,
+                                    &part_elem->index_file_name);
+*/
+/*
+        error= set_up_table_before_create(thd,
+                                          m_table->s,
+                                          part_name_buff,
+                                          create_info,
+                                          part_elem);
+
+        if (error)
+        {
+          goto err;
+        }
+*/
+
+        part_name(part_name_buff,
+                  path,
+                  nullptr,
+                  part_elem->partition_name,
+                  TEMP_PART_NAME);
+
+        if ((res= create_new_partition(m_table,
+                                      ha_alter_info->create_info,
+                                         (const char *)part_name_buff,
+                                         i,
+                                         part_elem)))
+        {
+          goto error;
+        }
+        /* Reset create_info to table level values. */
+        ha_alter_info->create_info->data_file_name=
+          table_level_data_file_name;
+        ha_alter_info->create_info->index_file_name=
+          table_level_index_file_name;
+        ha_alter_info->create_info->tablespace=
+          table_level_tablespace_name;
+      }
+    }
+  } while (++i < num_parts);
+
+
+	res = copy_partitions(&deleted);
+
+
+
+  goto exit;
+error:
+		print_error(res,
+			    MYF(res != ER_OUTOFMEMORY ? 0 : ME_FATALERROR));
+exit:
+	return(res);
+}
 
 bool Partition_base::inplace_alter_table(
   TABLE *altered_table,
@@ -5089,6 +5691,14 @@ bool Partition_base::inplace_alter_table(
   const dd::Table* old_table_def,
   dd::Table* new_table_def)
 {
+
+	if (part_apply_to(ha_alter_info)) {
+		return(inplace_alter_partition(
+			altered_table, ha_alter_info,
+			old_table_def, new_table_def));
+	}
+
+
   uint index= 0;
   bool error= false;
   Partition_base_inplace_ctx *part_inplace_ctx;
@@ -5121,6 +5731,17 @@ bool Partition_base::inplace_alter_table(
 }
 
 
+bool Partition_base::commit_inplace_alter_partition(
+      TABLE*, Alter_inplace_info*,
+      bool, const dd::Table*, dd::Table*)
+{
+
+  // TODO: NYI
+  DBUG_ASSERT(0);
+  return false;
+}
+
+
 /*
   Note that this function will try rollback failed ADD INDEX by
   executing DROP INDEX for the indexes that were committed (if any)
@@ -5136,6 +5757,15 @@ bool Partition_base::commit_inplace_alter_table(
   const dd::Table* old_table_def,
   dd::Table* new_table_def)
 {
+
+	if (part_apply_to(ha_alter_info)) {
+		return(commit_inplace_alter_partition(
+			altered_table, ha_alter_info, commit,
+			old_table_def, new_table_def));
+	}
+
+
+
   Partition_base_inplace_ctx *part_inplace_ctx;
   bool error= false;
 

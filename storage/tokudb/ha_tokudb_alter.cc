@@ -1150,6 +1150,10 @@ enum_alter_inplace_result ha_tokudb::check_if_supported_inplace_alter(
             result = HA_ALTER_INPLACE_NO_LOCK_AFTER_PREPARE;
         }
     }
+    else if (only_flags(ctx->handler_flags, Alter_inplace_info::REORGANIZE_PARTITION)) {
+        result = HA_ALTER_INPLACE_EXCLUSIVE_LOCK;
+
+    }
 #if TOKU_OPTIMIZE_WITH_RECREATE
     else if (only_flags(
                 ctx->handler_flags,
