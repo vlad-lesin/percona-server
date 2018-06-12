@@ -4833,6 +4833,17 @@ enum row_type Partition_base::get_row_type() const
   return row_type(0);
 }
 
+bool Partition_base::continue_partition_copying_on_error(int error) {
+  THD *thd= get_thd();
+  if ((error == HA_ERR_NO_PARTITION_FOUND) &&
+      (thd->lex->alter_info != NULL) &&
+      (thd->lex->alter_info->flags &
+        (Alter_info::ALTER_REORGANIZE_PARTITION |
+         Alter_info::ALTER_DROP_PARTITION)))
+    return true;
+  return false;
+}
+
 void Partition_base::print_error(int error, myf errflag)
 {
   DBUG_ENTER("Partition_base::print_error");

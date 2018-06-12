@@ -409,7 +409,7 @@ public:
     return false;
   }
 
-
+  virtual bool continue_partition_copying_on_error(int error);
   /*
     -------------------------------------------------------------------------
     MODULE full table scan

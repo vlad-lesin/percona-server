@@ -14689,7 +14689,7 @@ copy_data_between_tables(THD * thd,
 	to->file->print_error(error, MYF(0));
 	break;
       }
-      else
+      else if (!to->file->continue_partition_copying_on_error(error))
       {
         /* Report duplicate key error. */
         uint key_nr= to->file->get_dup_key(error);
