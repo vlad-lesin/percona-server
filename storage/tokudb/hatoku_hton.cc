@@ -671,7 +671,7 @@ static handler* tokudb_create_handler(
 }
 
 static uint tokudb_partition_flags() {
-    return(HA_CAN_EXCHANGE_PARTITION | HA_CANNOT_PARTITION_FK);
+    return HA_CANNOT_PARTITION_FK;
 }
 
 int tokudb_end(TOKUDB_UNUSED(handlerton* hton),
