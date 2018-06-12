@@ -10,9 +10,6 @@
 # Original Date: 2008-06-27                                                    #
 ################################################################################
 
-# The server must support partitioning.
---source include/have_partition.inc
-
 #
 # NOTE: PLEASE DO NOT ADD NOT TOKUDB SPECIFIC TESTCASES HERE !
 #       TESTCASES WHICH MUST BE APPLIED TO ALL STORAGE ENGINES MUST BE ADDED IN
@@ -32,7 +29,8 @@
 ##### Storage engine to be tested
 --source include/have_tokudb.inc
 let $engine= 'TokuDB';
+let $native_partitioning= 1;
 
 #------------------------------------------------------------------------------#
 # Execute the tests to be applied to all storage engines
---source suite/parts/inc/partition_mgm.inc
+--source partition_mgm.inc
