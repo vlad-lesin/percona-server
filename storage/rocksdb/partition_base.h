@@ -62,7 +62,9 @@ private:
   /* Data for the partition handler */
   int  m_mode;                          // Open mode
   uint m_open_test_lock;                // Open test_if_locked
+protected:
   handler **m_file;                     // Array of references to handler inst.
+private:
   uint m_file_tot_parts;                // Debug
   /*
     Since the partition handler is a handler on top of other handlers, it
