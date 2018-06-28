@@ -868,6 +868,14 @@ public:
     return m_store_row_debug_checksums && (rand() % 100 < m_checksums_pct);
   }
 
+  int rename_partitioned_table(const char *const from,
+                               const char *const to,
+                               const std::string &partition_string)
+      MY_ATTRIBUTE((__warn_unused_result__));
+
+  int rename_non_partitioned_table(const char *const from, const char *const to)
+      MY_ATTRIBUTE((__warn_unused_result__));
+
   int rename_table(const char *const from, const char *const to) override
       MY_ATTRIBUTE((__warn_unused_result__));
 
@@ -1290,6 +1298,11 @@ public:
   int remove_rows(Rdb_tbl_def *const tbl);
   ha_rows records_in_range(uint inx, key_range *const min_key,
                            key_range *const max_key) override
+      MY_ATTRIBUTE((__warn_unused_result__));
+  int delete_non_partitioned_table(const char *const from)
+      MY_ATTRIBUTE((__warn_unused_result__));
+  int delete_partitioned_table(const char *const from,
+                               const std::string &partition_info_str)
       MY_ATTRIBUTE((__warn_unused_result__));
   int delete_table(const char *const from) override
       MY_ATTRIBUTE((__warn_unused_result__));

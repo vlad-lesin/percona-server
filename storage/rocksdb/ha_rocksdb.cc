@@ -3722,7 +3722,7 @@ static rocksdb::Status check_rocksdb_options_compatibility(
 }
 
 static uint rocksdb_partition_flags() {
-    return(HA_CAN_EXCHANGE_PARTITION | HA_CANNOT_PARTITION_FK);
+    return(HA_CANNOT_PARTITION_FK);
 }
 
 /*
@@ -9969,7 +9969,7 @@ Rdb_tbl_def *ha_rocksdb::get_table_if_exists(const char *const tablename) {
     other            HA_ERR error code (can be SE-specific)
 */
 
-int ha_rocksdb::delete_table(const char *const tablename) {
+int ha_rocksdb::delete_non_partitioned_table(const char *const tablename) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(tablename != nullptr);
@@ -9997,6 +9997,45 @@ int ha_rocksdb::delete_table(const char *const tablename) {
   rdb_drop_idx_thread.signal();
 
   DBUG_RETURN(HA_EXIT_SUCCESS);
+}
+
+static int init_partition_handler(THD *thd,
+                                  const std::string &partition_string,
+                                  ha_rockspart &file) {
+  DBUG_ASSERT(thd);
+  MEM_ROOT *mem_root = thd->mem_root;
+
+  partition_info *part_info =
+    parse_partition_info(thd, partition_string);
+
+  if (file.init_partitioning(mem_root))
+    return HA_ERR_NO_SUCH_TABLE; // TODO: return correct error code here
+
+  file.set_part_info(part_info, false);
+
+  if (file.initialize_partition(mem_root))
+    return HA_ERR_NO_SUCH_TABLE; // TODO: return correct error code here
+
+  return 0;
+}
+
+int ha_rocksdb::delete_partitioned_table(
+  const char *const tablename, const std::string &partition_info_str) {
+  ha_rockspart file(rocksdb_hton, nullptr);
+  int result = init_partition_handler(ha_thd(), partition_info_str, file);
+  if (result)
+    return result;
+  return file.delete_table(tablename);
+}
+
+int ha_rocksdb::delete_table(const char *const tablename) {
+  DBUG_ASSERT(tablename);
+  std::string partition_info_str;
+  if (!get_part_str(tablename, partition_info_str))
+      return HA_ERR_NO_SUCH_TABLE; // TODO: set correct error code here
+  if (partition_info_str.empty())
+      return delete_non_partitioned_table(tablename);
+  return delete_partitioned_table(tablename, partition_info_str);
 }
 
 int ha_rocksdb::remove_rows(Rdb_tbl_def *const tbl) {
@@ -10059,12 +10098,23 @@ int ha_rocksdb::remove_rows(Rdb_tbl_def *const tbl) {
   return HA_EXIT_SUCCESS;
 }
 
+int ha_rocksdb::rename_partitioned_table(const char *const from,
+                                         const char *const to,
+                                         const std::string &partition_string) {
+  ha_rockspart file(rocksdb_hton, nullptr);
+  int result = init_partition_handler(ha_thd(), partition_string, file);
+  if (result)
+    return result;
+  return file.rename_table(from, to);
+}
+
 /**
   @return
     HA_EXIT_SUCCESS  OK
     other            HA_ERR error code (cannot be SE-specific)
 */
-int ha_rocksdb::rename_table(const char *const from, const char *const to) {
+int ha_rocksdb::rename_non_partitioned_table(const char *const from,
+                                             const char *const to) {
   DBUG_ENTER_FUNC();
 
   DBUG_ASSERT(from != nullptr);
@@ -10119,6 +10169,17 @@ int ha_rocksdb::rename_table(const char *const from, const char *const to) {
   dict_manager.unlock();
 
   DBUG_RETURN(rc);
+}
+
+int ha_rocksdb::rename_table(const char *const from, const char *const to) {
+  DBUG_ASSERT(from);
+  DBUG_ASSERT(to);
+  std::string partition_info_str;
+  if (!get_part_str(from, partition_info_str))
+      return HA_ERR_NO_SUCH_TABLE; // TODO: set correct error code here
+  if (partition_info_str.empty())
+      return rename_non_partitioned_table(from, to);
+  return rename_partitioned_table(from, to, partition_info_str);
 }
 
 /**
