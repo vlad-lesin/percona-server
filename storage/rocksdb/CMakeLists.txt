@@ -158,6 +158,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zstd/lib
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zstd/lib/common
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zstd/lib/dictBuilder
+  ${CMAKE_SOURCE_DIR}/sql
 )
 
 ADD_DEFINITIONS(-DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX -DZLIB -DLZ4
@@ -186,6 +187,7 @@ SET(ROCKSDB_SOURCES
   rdb_sst_info.cc rdb_sst_info.h
   rdb_utils.cc rdb_utils.h rdb_buff.h
   rdb_threads.cc rdb_threads.h
+  partition_base.cc partition_base.h
   ${ROCKSDB_LIB_SOURCES}
 )
 
