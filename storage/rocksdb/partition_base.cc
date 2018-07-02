@@ -3401,18 +3401,14 @@ int Partition_base::read_range_next_in_part(uint part, uchar * buf)
 
 bool Partition_base::has_gap_locks() const
 {
-// TODO: there is no has_gap_locks in handler
   /* Pass the call to each partition */
-/*
+
   for (uint i= 0; i < m_tot_parts; i++)
   {
     if (!m_file[i]->has_gap_locks())
       return false;
   }
   return true;
-*/
-  DBUG_ASSERT(0);
-  return false;
 }
 
 /****************************************************************************
