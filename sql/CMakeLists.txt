@@ -475,6 +475,16 @@ ELSE()
   SET(MYSQLD_SOURCE main.cc ${DTRACE_PROBES_ALL})
 ENDIF()
 
+CHECK_CXX_COMPILER_FLAG(-std=gnu++11 CXX11_OPTION_SUPPORTED)
+IF (CXX11_OPTION_SUPPORTED)
+  LIST(APPEND MYSQLD_SOURCE partitioning/partition_base.cc)
+  ADD_COMPILE_FLAGS(partitioning/partition_base.cc
+    COMPILE_FLAGS -std=gnu++11 -Wno-deprecated-declarations)
+ELSE ()
+  MESSAGE(WARNING
+    "-std=gnu++11 support is required to build TokuDB/RocksDB native partitioning")
+ENDIF ()
+
 MYSQL_ADD_EXECUTABLE(mysqld
   ${MYSQLD_SOURCE} DESTINATION ${INSTALL_SBINDIR} COMPONENT Server)
 
