@@ -1004,6 +1004,12 @@ private:
                                          List<Item> &update_values,
                                          DB_TXN *txn);
 #endif  // defined(TOKU_INCLUDE_UPSERT) && TOKU_INCLUDE_UPSERT
+    MY_NODISCARD int delete_non_partitioned_table(const char *name);
+    MY_NODISCARD int delete_rename_partitioned_table(
+        const char *from, const char *to,
+        const std::string &partition_info_str);
+    MY_NODISCARD int rename_non_partitioned_table(
+        const char *from, const char *to);
 public:
     // mysql sometimes retires a txn before a cursor that references the txn is closed.
     // for example, commit is sometimes called before index_end.  the following methods

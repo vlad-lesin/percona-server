@@ -305,6 +305,8 @@ SET(SQL_SOURCE
   srv_session_service.cc
   )
 
+#set_source_files_properties(partitioning/partition_base.cc PROPERTIES COMPILE_FLAGS "-std=gnu++11 -Wno-deprecated-declarations")
+
 IF(NOT WIN32)
   LIST(APPEND SQL_SOURCE mysqld_daemon.cc)
 ENDIF()
@@ -474,6 +476,9 @@ IF(WIN32)
 ELSE()
   SET(MYSQLD_SOURCE main.cc ${DTRACE_PROBES_ALL})
 ENDIF()
+
+LIST(APPEND MYSQLD_SOURCE partitioning/partition_base.cc)
+ADD_COMPILE_FLAGS(partitioning/partition_base.cc COMPILE_FLAGS -std=gnu++11 -Wno-deprecated-declarations)
 
 MYSQL_ADD_EXECUTABLE(mysqld
   ${MYSQLD_SOURCE} DESTINATION ${INSTALL_SBINDIR} COMPONENT Server)
