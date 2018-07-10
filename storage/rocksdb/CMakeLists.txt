@@ -179,6 +179,8 @@ SET(ROCKSDB_SOURCES
   rdb_sst_info.cc rdb_sst_info.h
   rdb_utils.cc rdb_utils.h rdb_buff.h
   rdb_threads.cc rdb_threads.h
+  partition_base.cc partition_base.h
+  ha_rockspart.cc ha_rockspart.h
   ${ROCKSDB_LIB_SOURCES}
 )
 

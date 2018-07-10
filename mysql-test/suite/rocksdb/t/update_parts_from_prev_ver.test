@@ -1,0 +1,21 @@
+--source include/have_rocksdb.inc
+
+# For data directory created in previous major version branch.
+--source include/not_valgrind.inc
+#Zipped data directory was created with default 16K page size
+#Innodb does not recognizes partition table created in linux from windows
+#due to difference in path format.
+--source include/not_windows.inc
+
+--source update_parts_from_prev_ver_suppressions.inc
+
+--let $ADDITIONAL_OPTS=
+--let $DATA_DIR_NAME=data_prev_ver_part_rocksdb
+
+--source update_parts_from_prev_ver_alter.inc
+# There is no need for mysql_upgrade testing here because 5.6 does not support
+# MyRocks
+#--source update_parts_from_prev_ver_mysql_upgrade.inc
+
+--echo # Restart the server with default options.
+--source include/start_mysqld.inc
