@@ -1265,6 +1265,149 @@ uint Rdb_key_def::pack_hidden_pk(const longlong &hidden_pk_id,
   Function of type rdb_index_field_pack_t
 */
 
+#if !defined(DBL_EXP_DIG)
+#define DBL_EXP_DIG (sizeof(double) * 8 - DBL_MANT_DIG)
+#endif
+
+static void change_double_for_sort(double nr, uchar *to) {
+  uchar *tmp = to;
+  if (nr == 0.0) { /* Change to zero string */
+    tmp[0] = (uchar)128;
+    memset(tmp + 1, 0, sizeof(nr) - 1);
+  } else {
+#ifdef WORDS_BIGENDIAN
+    memcpy(tmp, &nr, sizeof(nr));
+#else
+    {
+      uchar *ptr = (uchar *)&nr;
+#if defined(__FLOAT_WORD_ORDER) && (__FLOAT_WORD_ORDER == __BIG_ENDIAN)
+      tmp[0] = ptr[3];
+      tmp[1] = ptr[2];
+      tmp[2] = ptr[1];
+      tmp[3] = ptr[0];
+      tmp[4] = ptr[7];
+      tmp[5] = ptr[6];
+      tmp[6] = ptr[5];
+      tmp[7] = ptr[4];
+#else
+      tmp[0] = ptr[7];
+      tmp[1] = ptr[6];
+      tmp[2] = ptr[5];
+      tmp[3] = ptr[4];
+      tmp[4] = ptr[3];
+      tmp[5] = ptr[2];
+      tmp[6] = ptr[1];
+      tmp[7] = ptr[0];
+#endif
+    }
+#endif
+    if (tmp[0] & 128) /* Negative */
+    {                 /* make complement */
+      uint i;
+      for (i = 0; i < sizeof(nr); i++)
+        tmp[i] = tmp[i] ^ (uchar)255;
+    } else { /* Set high and move exponent one up */
+      ushort exp_part =
+          (((ushort)tmp[0] << 8) | (ushort)tmp[1] | (ushort)32768);
+      exp_part += (ushort)1 << (16 - 1 - DBL_EXP_DIG);
+      tmp[0] = (uchar)(exp_part >> 8);
+      tmp[1] = (uchar)exp_part;
+    }
+  }
+}
+
+void Rdb_key_def::pack_double(
+    Rdb_field_packing *const fpi, Field *const field,
+    uchar *const buf MY_ATTRIBUTE((__unused__)), uchar **dst,
+    Rdb_pack_field_context *const pack_ctx MY_ATTRIBUTE((__unused__))) const {
+  DBUG_ASSERT(fpi != nullptr);
+  DBUG_ASSERT(field != nullptr);
+  DBUG_ASSERT(dst != nullptr);
+  DBUG_ASSERT(*dst != nullptr);
+
+  fprintf(stderr, "Rdb_key_def::pack_double - packing %f\n",
+          *(float *)field->ptr);
+
+  const size_t length = fpi->m_max_image_len;
+  uchar *to = *dst;
+
+  double nr;
+#ifdef WORDS_BIGENDIAN
+  if (table->s->db_low_byte_first) {
+    float8get(&nr, field->ptr);
+  } else
+#endif
+    doubleget(&nr, field->ptr);
+  if (length < 8) {
+    uchar buff[8];
+    change_double_for_sort(nr, buff);
+    memcpy(to, buff, length);
+  } else
+    change_double_for_sort(nr, to);
+
+  *dst += length;
+}
+
+#if !defined(FLT_EXP_DIG)
+#define FLT_EXP_DIG (sizeof(float) * 8 - FLT_MANT_DIG)
+#endif
+
+void Rdb_key_def::pack_float(
+    Rdb_field_packing *const fpi, Field *const field,
+    uchar *const buf MY_ATTRIBUTE((__unused__)), uchar **dst,
+    Rdb_pack_field_context *const pack_ctx MY_ATTRIBUTE((__unused__))) const {
+  DBUG_ASSERT(fpi != nullptr);
+  DBUG_ASSERT(field != nullptr);
+  DBUG_ASSERT(dst != nullptr);
+  DBUG_ASSERT(*dst != nullptr);
+
+  fprintf(stderr, "Rdb_key_def::pack_float - packing %f\n",
+          *(float *)field->ptr);
+
+  const size_t length = fpi->m_max_image_len;
+  uchar *to = *dst;
+
+  DBUG_ASSERT(length == sizeof(float));
+  DBUG_ASSERT(length >= 4);
+  float nr;
+
+#ifdef WORDS_BIGENDIAN
+  if (table->s->db_low_byte_first) {
+    float4get(&nr, field->ptr);
+  } else
+#endif
+    memcpy(&nr, field->ptr, length < sizeof(float) ? length : sizeof(float));
+
+  uchar *tmp = to;
+  if (nr == (float)0.0) { /* Change to zero string */
+    tmp[0] = (uchar)128;
+    memset(tmp + 1, 0, length < sizeof(nr) - 1 ? length : sizeof(nr) - 1);
+  } else {
+#ifdef WORDS_BIGENDIAN
+    memcpy(tmp, &nr, sizeof(nr));
+#else
+    tmp[0] = field->ptr[3];
+    tmp[1] = field->ptr[2];
+    tmp[2] = field->ptr[1];
+    tmp[3] = field->ptr[0];
+#endif
+    if (tmp[0] & 128) /* Negative */
+    {                 /* make complement */
+      uint i;
+      for (i = 0; i < sizeof(nr); i++)
+        tmp[i] = (uchar)(tmp[i] ^ (uchar)255);
+    } else {
+      ushort exp_part =
+          (((ushort)tmp[0] << 8) | (ushort)tmp[1] | (ushort)32768);
+      exp_part += (ushort)1 << (16 - 1 - FLT_EXP_DIG);
+      tmp[0] = (uchar)(exp_part >> 8);
+      tmp[1] = (uchar)exp_part;
+    }
+  }
+
+  *dst += length;
+}
+
 void Rdb_key_def::pack_with_make_sort_key(
     Rdb_field_packing *const fpi, Field *const field,
     uchar *const buf MY_ATTRIBUTE((__unused__)), uchar **dst,
@@ -1887,10 +2030,6 @@ int Rdb_key_def::unpack_floating_point(
   return UNPACK_SUCCESS;
 }
 
-#if !defined(DBL_EXP_DIG)
-#define DBL_EXP_DIG (sizeof(double) * 8 - DBL_MANT_DIG)
-#endif
-
 /*
   Function of type rdb_index_field_unpack_t
 
@@ -1911,10 +2050,6 @@ int Rdb_key_def::unpack_double(
                                zero_pattern, (const uchar *)&zero_val,
                                rdb_swap_double_bytes);
 }
-
-#if !defined(FLT_EXP_DIG)
-#define FLT_EXP_DIG (sizeof(float) * 8 - FLT_MANT_DIG)
-#endif
 
 /*
   Function of type rdb_index_field_unpack_t
@@ -3117,11 +3252,13 @@ bool Rdb_field_packing::setup(const Rdb_key_def *const key_descr,
     return true;
 
   case MYSQL_TYPE_DOUBLE:
+    m_pack_func = &Rdb_key_def::pack_double;
     m_unpack_func = &Rdb_key_def::unpack_double;
     m_covered = true;
     return true;
 
   case MYSQL_TYPE_FLOAT:
+    m_pack_func = &Rdb_key_def::pack_float;
     m_unpack_func = &Rdb_key_def::unpack_float;
     m_covered = true;
     return true;
