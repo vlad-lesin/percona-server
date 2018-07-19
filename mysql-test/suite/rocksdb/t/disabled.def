@@ -25,9 +25,8 @@ bulk_load_unsorted_rev : native partitioning
 gap_lock_error : native partitioning
 get_error_message : native partitioning
 issue495 : native partitioning
-partition : native partitioning
 rocksdb : native partitioning
-rocksdb_cf_per_partition : native partitioning
+rocksdb_cf_per_partition : enable when https://bugs.mysql.com/bug.php?id=91763 is fixed
 rocksdb_parts : native partitioning
 show_engine : native partitioning
 tbl_opt_data_index_dir : native partitioning
