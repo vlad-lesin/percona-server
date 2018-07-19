@@ -3946,7 +3946,6 @@ class handler {
   int ha_sample_next(uchar *buf);
   int ha_sample_end();
 
- private:
   /**
     Query storage engine to see if it supports gap locks on this table.
   */
@@ -4018,6 +4017,10 @@ class handler {
   */
 
   virtual bool is_ignorable_error(int error);
+  virtual bool continue_partition_copying_on_error(int error) {
+    (void)(error);
+    return false;
+  }
 
   /**
     @brief Determine whether an error is fatal or not.
@@ -4226,7 +4229,8 @@ class handler {
     uint key_len = calculate_key_len(table, active_index, keypart_map);
     return index_read_last(buf, key, key_len);
   }
-
+// It's required for TokuDB partitioning
+public:
   virtual int read_range_first(const key_range *start_key,
                                const key_range *end_key, bool eq_range,
                                bool sorted);

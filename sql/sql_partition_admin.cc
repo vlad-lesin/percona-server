@@ -455,9 +455,6 @@ bool Sql_cmd_alter_table_exchange_partition::exchange_partition(
   if (ha_error) {
     handlerton *hton = part_table->file->ht;
     part_table->file->print_error(ha_error, MYF(0));
-    // Close TABLE instances which marked as old earlier.
-    close_all_tables_for_name(thd, swap_table->s, false, NULL);
-    close_all_tables_for_name(thd, part_table->s, false, NULL);
     /*
       Rollback all possible changes to data-dictionary and SE which
       Partition_handler::exchange_partitions() might have done before

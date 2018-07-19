@@ -393,6 +393,7 @@ class Partition_helper {
   Partition_helper(handler *main_handler);
   virtual ~Partition_helper();
 
+  void set_active_index(uint inx) { m_handler->active_index= inx; }
   /**
     Set partition info.
 
@@ -452,12 +453,14 @@ class Partition_helper {
 
     @param old_data  The old record in MySQL Row Format.
     @param new_data  The new record in MySQL Row Format.
+    @param lookup_rows Indicator for TokuDB read free replication.
 
     @return Operation status.
       @retval    0 Success
       @retval != 0 Error code
   */
-  int ph_update_row(const uchar *old_data, uchar *new_data);
+  int ph_update_row(const uchar *old_data, uchar *new_data,
+                    bool lookup_rows = true);
   /**
     Delete an existing row in the partitioned table.
 
@@ -472,12 +475,13 @@ class Partition_helper {
     buf is either record[0] or record[1]
 
     @param buf  The record in MySQL Row Format.
+    @param lookup_rows Indicator for TokuDB read free replication.
 
     @return Operation status.
       @retval    0 Success
       @retval != 0 Error code
   */
-  int ph_delete_row(const uchar *buf);
+  int ph_delete_row(const uchar *buf, bool lookup_rows = true);
 
   /** @} */
 
