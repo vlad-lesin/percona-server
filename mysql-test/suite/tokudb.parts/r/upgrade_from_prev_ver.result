@@ -1,10 +1,10 @@
+# Copy the remote tablespace & DB zip files from suite location to working location.
+# Check that the file exists in the working folder.
+# Stop DB server which was created by MTR default
 #########
 # Test for "ALTER TABLE ... UPGRADE PARTITIONING"
 ###
-# Copy the remote tablespace & DB zip files from suite location to working location.
-# Check that the file exists in the working folder.
 # Unzip the zip file.
-# Stop DB server which was created by MTR default
 # Create a bootstrap file in temp location
 MYSQL_TMP_DIR/bootstrap.log
 # Restart the server

@@ -1,26 +1,10 @@
-# Set different paths for --datadir
-let $MYSQLD_DATADIR1 = $MYSQL_TMP_DIR/$DATA_DIR_NAME;
-let $DATA_ARCH_PATH = $MYSQL_TMP_DIR/$DATA_DIR_NAME.zip;
-
 --echo #########
 --echo # Test for "ALTER TABLE ... UPGRADE PARTITIONING"
 --echo ###
 
---echo # Copy the remote tablespace & DB zip files from suite location to working location.
---copy_file $MYSQLTEST_VARDIR/std_data/$DATA_DIR_NAME.zip $DATA_ARCH_PATH
-
---echo # Check that the file exists in the working folder.
---file_exists $DATA_ARCH_PATH
-
 --echo # Unzip the zip file.
+--file_exists $DATA_ARCH_PATH
 --exec unzip -qo $DATA_ARCH_PATH -d $MYSQL_TMP_DIR
-
---let $MYSQLD_DATADIR=`SELECT @@datadir`
-
---echo # Stop DB server which was created by MTR default
---exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
---shutdown_server
---source include/wait_until_disconnected.inc
 
 --echo # Create a bootstrap file in temp location
 --replace_result $MYSQL_TMP_DIR MYSQL_TMP_DIR

@@ -3,6 +3,7 @@
 --echo ###
 
 --echo # Unzip the zip file.
+--file_exists $DATA_ARCH_PATH
 --exec unzip -qo $DATA_ARCH_PATH -d $MYSQL_TMP_DIR
 
 --echo # Restart the server
