@@ -17,16 +17,17 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "partitioning/partition_handler.h"  /* Partition_handler */
+#include "item.h"
+#include "table.h"
+#include "partitioning/partition_handler.h" /* Partition_handler */
 
 namespace native_part {
 
 /** class where to save partitions Handler_share's */
-class Parts_share_refs
-{
-public:
-  uint num_parts;                              /**< Size of ha_share array */
-  Handler_share **ha_shares;                   /**< Storage for each part */
+class Parts_share_refs {
+ public:
+  uint            num_parts; /**< Size of ha_share array */
+  Handler_share **ha_shares; /**< Storage for each part */
   Parts_share_refs();
   ~Parts_share_refs();
   bool init(uint arg_num_parts);
@@ -36,9 +37,8 @@ public:
 /**
   Partition specific Handler_share.
 */
-class Partition_base_share : public Partition_share
-{
-public:
+class Partition_base_share : public Partition_share {
+ public:
   /** Storage for each partitions Handler_share */
   Parts_share_refs *partitions_share_refs;
   Partition_base_share();
@@ -46,27 +46,26 @@ public:
   bool init(uint num_parts);
 };
 
-class Partition_base :
-	public handler,
-	public Partition_helper,
-	public Partition_handler
-{
-public:
-  bool init_partitioning(MEM_ROOT *mem_root) {
+class Partition_base : public handler,
+                       public Partition_helper,
+                       public Partition_handler {
+ public:
+  bool init_partitioning(MEM_ROOT *mem_root)
+  {
     return Partition_helper::init_partitioning(mem_root);
   }
 
-private:
-  virtual handler *get_file_handler(TABLE_SHARE *share,
-                                    MEM_ROOT *alloc) = 0;
-private:
+ private:
+  virtual handler *get_file_handler(TABLE_SHARE *share, MEM_ROOT *alloc)= 0;
+
+ private:
   /* Data for the partition handler */
-  int  m_mode;                          // Open mode
-  uint m_open_test_lock;                // Open test_if_locked
-protected:
-  handler **m_file;                     // Array of references to handler inst.
-private:
-  uint m_file_tot_parts;                // Debug
+  int  m_mode;            // Open mode
+  uint m_open_test_lock;  // Open test_if_locked
+ protected:
+  handler **m_file;  // Array of references to handler inst.
+ private:
+  uint m_file_tot_parts;  // Debug
   /*
     Since the partition handler is a handler on top of other handlers, it
     is necessary to keep information about what the underlying handler
@@ -75,8 +74,7 @@ private:
     without freeing them.
   */
   ulong m_low_byte_first;
-  enum enum_handler_status
-  {
+  enum enum_handler_status {
     handler_not_initialized= 0,
     handler_initialized,
     handler_opened,
@@ -84,7 +82,7 @@ private:
   };
   enum_handler_status m_handler_status;
 
-  uint m_num_locks;                       // For engines like ha_blackhole, which needs no locks
+  uint m_num_locks;  // For engines like ha_blackhole, which needs no locks
 
   /**
     Array of new partitions used during
@@ -102,20 +100,20 @@ private:
     "own" the m_part_info structure.
   */
   Partition_base *m_is_clone_of;
-  MEM_ROOT *m_clone_mem_root;
+  MEM_ROOT *      m_clone_mem_root;
 
   /*
     We keep track if all underlying handlers are MyISAM since MyISAM has a
     great number of extra flags not needed by other handlers.
   */
-  bool m_myisam;                         // Are all underlying handlers
-                                         // MyISAM
+  bool m_myisam;  // Are all underlying handlers
+                  // MyISAM
   /*
     We keep track of InnoDB handlers below since it requires proper setting
     of query_id in fields at index_init and index_read calls.
   */
-  bool m_innodb;                        // Are all underlying handlers
-                                        // InnoDB
+  bool m_innodb;  // Are all underlying handlers
+                  // InnoDB
   /*
     When calling extra(HA_EXTRA_CACHE) we do not pass this to the underlying
     handlers immediately. Instead we cache it and call the underlying
@@ -135,7 +133,7 @@ private:
   /*
     Variables for lock structures.
   */
-  THR_LOCK_DATA lock;                   /* MySQL lock */
+  THR_LOCK_DATA lock; /* MySQL lock */
 
   /** For optimizing ha_start_bulk_insert calls */
   MY_BITMAP m_bulk_insert_started;
@@ -151,13 +149,13 @@ private:
   /** Sorted array of partition ids in descending order of number of rows. */
   uint32 *m_part_ids_sorted_by_num_of_records;
   /* Compare function for my_qsort2, for reversed order. */
-  static int compare_number_of_records(Partition_base *me,
-                                       const uint32 *a,
+  static int compare_number_of_records(Partition_base *me, const uint32 *a,
                                        const uint32 *b);
   /** keep track of partitions to call ha_reset */
   MY_BITMAP m_partitions_to_reset;
-public:
-  virtual handler *clone(const char *name, MEM_ROOT *mem_root) = 0;
+
+ public:
+  virtual handler *clone(const char *name, MEM_ROOT *mem_root)= 0;
   /*
     -------------------------------------------------------------------------
     MODULE create/delete handler object
@@ -169,13 +167,12 @@ public:
     partition handler.
     -------------------------------------------------------------------------
   */
-    Partition_base(handlerton *hton, TABLE_SHARE * table);
-    Partition_base(handlerton *hton, TABLE_SHARE *share,
-                 partition_info *part_info_arg,
-                 Partition_base *clone_arg,
+  Partition_base(handlerton *hton, TABLE_SHARE *table);
+  Partition_base(handlerton *hton, TABLE_SHARE *share,
+                 partition_info *part_info_arg, Partition_base *clone_arg,
                  MEM_ROOT *clone_mem_root_arg);
-   ~Partition_base();
-   bool init_with_fields();
+  ~Partition_base();
+  bool init_with_fields();
   /*
     A partition handler has no characteristics in itself. It only inherits
     those from the underlying handlers. Here we set-up those constants to
@@ -195,19 +192,15 @@ public:
     object needed in opening the object in openfrm
     -------------------------------------------------------------------------
   */
-  virtual int delete_table(const char *from);
-  virtual int rename_table(const char *from, const char *to);
-  virtual int create(const char *name, TABLE *form,
-                     HA_CREATE_INFO *create_info);
+  virtual int  delete_table(const char *from);
+  virtual int  rename_table(const char *from, const char *to);
+  virtual int  create(const char *name, TABLE *form,
+                      HA_CREATE_INFO *create_info);
   virtual void update_create_info(HA_CREATE_INFO *create_info);
-  int change_partitions_low(HA_CREATE_INFO *create_info,
-                            const char *path,
-                            ulonglong * const copied,
-                            ulonglong * const deleted)
+  int change_partitions_low(HA_CREATE_INFO *create_info, const char *path,
+                            ulonglong *const copied, ulonglong *const deleted)
   {
-    return Partition_helper::change_partitions(create_info,
-                                               path,
-                                               copied,
+    return Partition_helper::change_partitions(create_info, path, copied,
                                                deleted);
   }
 
@@ -217,9 +210,10 @@ public:
   @param    thd          Thread handler
   @param    part_name    Must be always NULL.
   */
-  virtual void update_field_defs_with_zip_dict_info(THD* thd,
-                                                    const char* part_name);
-private:
+  virtual void update_field_defs_with_zip_dict_info(THD *       thd,
+                                                    const char *part_name);
+
+ private:
   bool get_num_parts(const char *name, uint *num_parts)
   {
     DBUG_ENTER("Partition_base::get_num_parts");
@@ -227,20 +221,17 @@ private:
     DBUG_RETURN(0);
   }
 
-  template<typename Fn>
-  bool foreach_partition(const Fn& fn);
+  template <typename Fn>
+  bool foreach_partition(const Fn &fn);
 
   virtual void change_table_ptr(TABLE *table_arg, TABLE_SHARE *share);
   virtual bool check_if_incompatible_data(HA_CREATE_INFO *create_info,
-                                          uint table_changes);
-  int prepare_for_new_partitions(uint num_partitions,
-                                 bool only_create);
-  int create_new_partition(TABLE *table,
-                           HA_CREATE_INFO *create_info,
-                           const char *part_name,
-                           uint new_part_id,
-                           partition_element *p_elem);
-  int write_row_in_new_part(uint part_id);
+                                          uint            table_changes);
+  int  prepare_for_new_partitions(uint num_partitions, bool only_create);
+  int  create_new_partition(TABLE *table, HA_CREATE_INFO *create_info,
+                            const char *part_name, uint new_part_id,
+                            partition_element *p_elem);
+  int  write_row_in_new_part(uint part_id);
   void close_new_partitions();
   /*
     delete_table and rename_table uses very similar logic which
@@ -252,19 +243,18 @@ private:
     underlying partitions, their engine and the number of partitions.
     And one method to read it in.
   */
-  bool setup_engine_array(MEM_ROOT *mem_root);
-  bool new_handlers_from_part_info(MEM_ROOT *mem_root);
-  partition_element *find_partition_element(uint part_id);
-  bool populate_partition_name_hash();
+  bool                  setup_engine_array(MEM_ROOT *mem_root);
+  bool                  new_handlers_from_part_info(MEM_ROOT *mem_root);
+  partition_element *   find_partition_element(uint part_id);
+  bool                  populate_partition_name_hash();
   Partition_base_share *get_share();
-  bool set_ha_share_ref(Handler_share **ha_share);
-  bool init_part_share();
-  void fix_data_dir(char* path);
-  bool init_partition_bitmaps();
-  void free_partition_bitmaps();
+  bool                  set_ha_share_ref(Handler_share **ha_share);
+  bool                  init_part_share();
+  void                  fix_data_dir(char *path);
+  bool                  init_partition_bitmaps();
+  void                  free_partition_bitmaps();
 
-public:
-
+ public:
   /*
     -------------------------------------------------------------------------
     MODULE open/close object
@@ -295,14 +285,14 @@ public:
     currently InnoDB, BDB and NDB).
     -------------------------------------------------------------------------
   */
-  virtual THR_LOCK_DATA **store_lock(THD * thd, THR_LOCK_DATA ** to,
+  virtual THR_LOCK_DATA **store_lock(THD *thd, THR_LOCK_DATA **to,
                                      enum thr_lock_type lock_type);
-  virtual int external_lock(THD * thd, int lock_type);
+  virtual int             external_lock(THD *thd, int lock_type);
   /*
     When table is locked a statement is started by calling start_stmt
     instead of external_lock
   */
-  virtual int start_stmt(THD * thd, thr_lock_type lock_type);
+  virtual int start_stmt(THD *thd, thr_lock_type lock_type);
   /*
     Lock count is number of locked underlying handlers (I assume)
   */
@@ -352,10 +342,7 @@ public:
     start_bulk_insert and end_bulk_insert is called before and after a
     number of calls to write_row.
   */
-  int write_row(uchar *buf)
-  {
-    return Partition_helper::ph_write_row(buf);
-  }
+  int write_row(uchar *buf) { return Partition_helper::ph_write_row(buf); }
   int update_row(const uchar *old_data, uchar *new_data)
   {
     return Partition_helper::ph_update_row(old_data, new_data,
@@ -365,16 +352,17 @@ public:
   {
     return Partition_helper::ph_delete_row(buf, rpl_lookup_rows());
   }
-  virtual int delete_all_rows(void);
-  virtual int truncate();
+  virtual int  delete_all_rows(void);
+  virtual int  truncate();
   virtual void start_bulk_insert(ha_rows rows);
-  virtual int end_bulk_insert();
-private:
-  ha_rows guess_bulk_insert_rows();
-  void start_part_bulk_insert(THD *thd, uint part_id);
-  long estimate_read_buffer_size(long original_size);
-public:
+  virtual int  end_bulk_insert();
 
+ private:
+  ha_rows guess_bulk_insert_rows();
+  void    start_part_bulk_insert(THD *thd, uint part_id);
+  long    estimate_read_buffer_size(long original_size);
+
+ public:
   /*
     Method for truncating a specific partition.
     (i.e. ALTER TABLE t1 TRUNCATE PARTITION p).
@@ -419,31 +407,21 @@ public:
     position it to the start of the table, no need to deallocate
     and allocate it again
   */
-  int rnd_init(bool scan)
-  {
-    return Partition_helper::ph_rnd_init(scan);
-  }
-  int rnd_end()
-  {
-    return Partition_helper::ph_rnd_end();
-  }
-  int rnd_next(uchar *buf)
-  {
-    return Partition_helper::ph_rnd_next(buf);
-  }
+  int rnd_init(bool scan) { return Partition_helper::ph_rnd_init(scan); }
+  int rnd_end() { return Partition_helper::ph_rnd_end(); }
+  int rnd_next(uchar *buf) { return Partition_helper::ph_rnd_next(buf); }
   int rnd_pos(uchar *buf, uchar *pos)
   {
     return Partition_helper::ph_rnd_pos(buf, pos);
   }
   int rnd_pos_by_record(uchar *record)
   {
-    if (unlikely(get_part_for_delete(record,
-                                     m_table->record[0],
-                                     m_part_info,
-                                     &m_last_part))) {
-      return(HA_ERR_INTERNAL_ERROR);
+    if (unlikely(get_part_for_delete(record, m_table->record[0], m_part_info,
+                                     &m_last_part)))
+    {
+      return (HA_ERR_INTERNAL_ERROR);
     }
-    return(m_file[m_last_part]->rnd_pos_by_record(record));
+    return (m_file[m_last_part]->rnd_pos_by_record(record));
   }
   void position(const uchar *record)
   {
@@ -482,24 +460,17 @@ public:
     index_init initializes an index before using it and index_end does
     any end processing needed.
   */
-  int index_read_map(uchar *buf,
-                     const uchar *key,
-                     key_part_map keypart_map,
+  int index_read_map(uchar *buf, const uchar *key, key_part_map keypart_map,
                      enum ha_rkey_function find_flag)
   {
-    return Partition_helper::ph_index_read_map(buf,
-                                               key,
-                                               keypart_map,
+    return Partition_helper::ph_index_read_map(buf, key, keypart_map,
                                                find_flag);
   }
   virtual int index_init(uint idx, bool sorted)
   {
     return Partition_helper::ph_index_init(idx, sorted);
   }
-  virtual int index_end()
-  {
-    return Partition_helper::ph_index_end();
-  }
+  virtual int index_end() { return Partition_helper::ph_index_end(); }
 
   /**
     @breif
@@ -507,44 +478,29 @@ public:
     row if available. If the key value is null, begin at first key of the
     index.
   */
-  int index_read_idx_map(uchar *buf,
-                         uint index,
-                         const uchar *key,
-                         key_part_map keypart_map,
+  int index_read_idx_map(uchar *buf, uint index, const uchar *key,
+                         key_part_map          keypart_map,
                          enum ha_rkey_function find_flag)
   {
-    return Partition_helper::ph_index_read_idx_map(buf,
-                                                   index,
-                                                   key,
-                                                   keypart_map,
-                                                   find_flag);
+    return Partition_helper::ph_index_read_idx_map(buf, index, key,
+                                                   keypart_map, find_flag);
   }
   /*
     These methods are used to jump to next or previous entry in the index
     scan. There are also methods to jump to first and last entry.
   */
-  int index_next(uchar *buf)
-  {
-    return Partition_helper::ph_index_next(buf);
-  }
-  int index_prev(uchar *buf)
-  {
-    return Partition_helper::ph_index_prev(buf);
-  }
+  int index_next(uchar *buf) { return Partition_helper::ph_index_next(buf); }
+  int index_prev(uchar *buf) { return Partition_helper::ph_index_prev(buf); }
   int index_first(uchar *buf)
   {
     return Partition_helper::ph_index_first(buf);
   }
-  int index_last(uchar *buf)
-  {
-    return Partition_helper::ph_index_last(buf);
-  }
+  int index_last(uchar *buf) { return Partition_helper::ph_index_last(buf); }
   int index_next_same(uchar *buf, const uchar *key, uint keylen)
   {
     return Partition_helper::ph_index_next_same(buf, key, keylen);
   }
-  int index_read_last_map(uchar *buf,
-                          const uchar *key,
+  int index_read_last_map(uchar *buf, const uchar *key,
                           key_part_map keypart_map)
   {
     return Partition_helper::ph_index_read_last_map(buf, key, keypart_map);
@@ -566,22 +522,16 @@ public:
     virtual int read_multi_range_next(KEY_MULTI_RANGE **found_range_p);
   */
 
-  int read_range_first(const key_range *start_key,
-                       const key_range *end_key,
-                       bool eq_range,
-                       bool sorted)
+  int read_range_first(const key_range *start_key, const key_range *end_key,
+                       bool eq_range, bool sorted)
   {
-    return Partition_helper::ph_read_range_first(start_key,
-                                                 end_key,
-                                                 eq_range,
+    return Partition_helper::ph_read_range_first(start_key, end_key, eq_range,
                                                  sorted);
   }
-  int read_range_next()
-  {
-    return Partition_helper::ph_read_range_next();
-  }
+  int  read_range_next() { return Partition_helper::ph_read_range_next(); }
   bool has_gap_locks() const;
-public:
+
+ public:
   /*
     -------------------------------------------------------------------------
     MODULE information calls
@@ -592,9 +542,8 @@ public:
     -------------------------------------------------------------------------
   */
   virtual int info(uint);
-  void get_dynamic_partition_info(ha_statistics *stat_info,
-                                  ha_checksum *check_sum,
-                                  uint part_id);
+  void        get_dynamic_partition_info(ha_statistics *stat_info,
+                                         ha_checksum *check_sum, uint part_id);
   virtual int extra(enum ha_extra_function operation);
   virtual int extra_opt(enum ha_extra_function operation, ulong cachesize);
   virtual int reset(void);
@@ -602,25 +551,23 @@ public:
     Do not allow caching of partitioned tables, since we cannot return
     a callback or engine_data that would work for a generic engine.
   */
-  virtual my_bool register_query_cache_table(THD *thd, char *table_key,
-                                             size_t key_length,
-                                             qc_engine_callback
-                                               *engine_callback,
-                                             ulonglong *engine_data)
+  virtual my_bool register_query_cache_table(
+      THD *thd, char *table_key, size_t key_length,
+      qc_engine_callback *engine_callback, ulonglong *engine_data)
   {
     *engine_callback= NULL;
     *engine_data= 0;
     return FALSE;
   }
 
-private:
+ private:
   static const uint NO_CURRENT_PART_ID;
-  int loop_extra(enum ha_extra_function operation);
-  void late_extra_cache(uint partition_id);
-  void late_extra_no_cache(uint partition_id);
-  void prepare_extra_cache(uint cachesize);
-public:
+  int               loop_extra(enum ha_extra_function operation);
+  void              late_extra_cache(uint partition_id);
+  void              late_extra_no_cache(uint partition_id);
+  void              prepare_extra_cache(uint cachesize);
 
+ public:
   /*
     -------------------------------------------------------------------------
     MODULE optimizer support
@@ -637,12 +584,12 @@ public:
      -------------------------------------------------------------------------
   */
 
-private:
+ private:
   /* Helper functions for optimizer hints. */
   ha_rows min_rows_for_estimate();
-  uint get_biggest_used_partition(uint *part_index);
-public:
+  uint    get_biggest_used_partition(uint *part_index);
 
+ public:
   /*
     keys_to_use_for_scanning can probably be implemented as the
     intersection of all underlying handlers if mixed handlers are used.
@@ -665,8 +612,8 @@ public:
     For the given range how many records are estimated to be in this range.
     Used by optimizer to calculate cost of using a particular index.
   */
-  virtual ha_rows records_in_range(uint inx, key_range * min_key,
-                                   key_range * max_key);
+  virtual ha_rows records_in_range(uint inx, key_range *min_key,
+                                   key_range *max_key);
 
   /*
     Upper bound of number records returned in scan is sum of all
@@ -679,7 +626,7 @@ public:
     underlying handlers must have the same implementation for it to work.
   */
   virtual uint8 table_cache_type();
-  virtual int records(ha_rows *num_rows);
+  virtual int   records(ha_rows *num_rows);
 
   /* Calculate hash value for PARTITION BY KEY tables. */
   uint32 calculate_key_hash_value(Field **field_array)
@@ -712,7 +659,7 @@ public:
      Handler specific error messages
   */
   virtual void print_error(int error, myf errflag);
-  virtual bool get_error_message(int error, String * buf);
+  virtual bool get_error_message(int error, String *buf);
   /*
    -------------------------------------------------------------------------
     MODULE handler characteristics
@@ -922,8 +869,7 @@ public:
   /*
     All handlers in a partitioned table must have the same low_byte_first
   */
-  virtual bool low_byte_first() const
-  { return m_low_byte_first; }
+  virtual bool low_byte_first() const { return m_low_byte_first; }
 
   /*
     The extra record buffer length is the maximum needed by all handlers.
@@ -937,7 +883,9 @@ public:
     this feature.
   */
   virtual bool primary_key_is_clustered() const
-  { return m_pkey_is_clustered; }
+  {
+    return m_pkey_is_clustered;
+  }
 
   /*
     -------------------------------------------------------------------------
@@ -955,7 +903,7 @@ public:
     to check whether the rest of the reference part is also the same.
     -------------------------------------------------------------------------
   */
-  virtual int cmp_ref(const uchar * ref1, const uchar * ref2);
+  virtual int cmp_ref(const uchar *ref1, const uchar *ref2);
 
   /*
     -------------------------------------------------------------------------
@@ -969,14 +917,14 @@ public:
   //const Item *cond_push(const Item *cond);
   //void cond_pop();
   /* Only Index condition pushdown is supported currently. */
-  Item *idx_cond_push(uint keyno, Item* idx_cond);
-  void cancel_pushed_idx_cond();
+  Item *idx_cond_push(uint keyno, Item *idx_cond);
+  void  cancel_pushed_idx_cond();
   /* No support of pushed joins yet! */
   //uint number_of_pushed_joins()
   //virtual const TABLE* root_of_pushed_join() const
   //virtual const TABLE* parent_of_pushed_join() const
   //virtual int index_read_pushed(uchar * buf, const uchar * key,
-                                //key_part_map keypart_map)
+  //key_part_map keypart_map)
   //virtual int index_next_pushed(uchar * buf)
 
 
@@ -994,18 +942,17 @@ public:
      -------------------------------------------------------------------------
   */
   virtual void get_auto_increment(ulonglong offset, ulonglong increment,
-                                  ulonglong nb_desired_values,
+                                  ulonglong  nb_desired_values,
                                   ulonglong *first_value,
                                   ulonglong *nb_reserved_values);
-  void release_auto_increment()
+  void         release_auto_increment()
   {
     Partition_helper::ph_release_auto_increment();
   }
   /** Release the auto increment for all underlying partitions. */
   void release_auto_increment_all_parts();
 
-public:
-
+ public:
   /*
      -------------------------------------------------------------------------
      MODULE initialize handler for HANDLER call
@@ -1041,7 +988,7 @@ public:
     List<FOREIGN_KEY_INFO> *f_key_list)
     virtual uint referenced_by_foreign_key()
   */
-    virtual bool can_switch_engines();
+  virtual bool can_switch_engines();
   /*
     -------------------------------------------------------------------------
     MODULE fulltext index
@@ -1063,24 +1010,23 @@ public:
     They are used for in-place alter table:
     -------------------------------------------------------------------------
   */
-    virtual enum_alter_inplace_result
-      check_if_supported_inplace_alter(TABLE *altered_table,
-                                       Alter_inplace_info *ha_alter_info);
-    virtual bool prepare_inplace_alter_table(TABLE *altered_table,
-                                             Alter_inplace_info *ha_alter_info);
-    virtual bool inplace_alter_table(TABLE *altered_table,
-                                     Alter_inplace_info *ha_alter_info);
-    virtual bool commit_inplace_alter_table(TABLE *altered_table,
-                                            Alter_inplace_info *ha_alter_info,
-                                            bool commit);
-    virtual void notify_table_changed();
+  virtual enum_alter_inplace_result check_if_supported_inplace_alter(
+      TABLE *altered_table, Alter_inplace_info *ha_alter_info);
+  virtual bool prepare_inplace_alter_table(TABLE *             altered_table,
+                                           Alter_inplace_info *ha_alter_info);
+  virtual bool inplace_alter_table(TABLE *             altered_table,
+                                   Alter_inplace_info *ha_alter_info);
+  virtual bool commit_inplace_alter_table(TABLE *             altered_table,
+                                          Alter_inplace_info *ha_alter_info,
+                                          bool                commit);
+  virtual void notify_table_changed();
 
   /*
     -------------------------------------------------------------------------
     MODULE tablespace support
     -------------------------------------------------------------------------
   */
-    virtual int discard_or_import_tablespace(my_bool discard);
+  virtual int discard_or_import_tablespace(my_bool discard);
 
   /*
     -------------------------------------------------------------------------
@@ -1094,22 +1040,22 @@ public:
       all partitions.
     -------------------------------------------------------------------------
   */
-    virtual int optimize(THD* thd, HA_CHECK_OPT *check_opt);
-    virtual int analyze(THD* thd, HA_CHECK_OPT *check_opt);
-    virtual int check(THD* thd, HA_CHECK_OPT *check_opt);
-    virtual int repair(THD* thd, HA_CHECK_OPT *check_opt);
-    virtual bool check_and_repair(THD *thd);
-    virtual bool auto_repair() const;
-    virtual bool is_crashed() const;
-    virtual int check_for_upgrade(HA_CHECK_OPT *check_opt);
+  virtual int  optimize(THD *thd, HA_CHECK_OPT *check_opt);
+  virtual int  analyze(THD *thd, HA_CHECK_OPT *check_opt);
+  virtual int  check(THD *thd, HA_CHECK_OPT *check_opt);
+  virtual int  repair(THD *thd, HA_CHECK_OPT *check_opt);
+  virtual bool check_and_repair(THD *thd);
+  virtual bool auto_repair() const;
+  virtual bool is_crashed() const;
+  virtual int  check_for_upgrade(HA_CHECK_OPT *check_opt);
 
-    private:
-    int handle_opt_partitions(THD *thd,
-                              HA_CHECK_OPT *check_opt,
-                              enum_part_operation operation);
-    int handle_opt_part(THD *thd, HA_CHECK_OPT *check_opt, uint part_id,
-                        enum_part_operation operation);
-    public:
+ private:
+  int handle_opt_partitions(THD *thd, HA_CHECK_OPT *check_opt,
+                            enum_part_operation operation);
+  int handle_opt_part(THD *thd, HA_CHECK_OPT *check_opt, uint part_id,
+                      enum_part_operation operation);
+
+ public:
   /*
     -------------------------------------------------------------------------
     Admin commands not supported currently (almost purely MyISAM routines)
@@ -1121,13 +1067,10 @@ public:
     virtual int dump(THD* thd, int fd = -1);
     virtual int net_read_dump(NET* net);
   */
-  ha_checksum checksum() const
-  {
-    return Partition_helper::ph_checksum();
-  }
+  ha_checksum checksum() const { return Partition_helper::ph_checksum(); }
   /* Enabled keycache for performance reasons, WL#4571 */
-    virtual int assign_to_keycache(THD* thd, HA_CHECK_OPT *check_opt);
-    virtual int preload_keys(THD* thd, HA_CHECK_OPT* check_opt);
+  virtual int assign_to_keycache(THD *thd, HA_CHECK_OPT *check_opt);
+  virtual int preload_keys(THD *thd, HA_CHECK_OPT *check_opt);
 
   /*
     -------------------------------------------------------------------------
@@ -1136,9 +1079,9 @@ public:
     Enable/Disable Indexes are only supported by HEAP and MyISAM.
     -------------------------------------------------------------------------
   */
-    virtual int disable_indexes(uint mode);
-    virtual int enable_indexes(uint mode);
-    virtual int indexes_are_disabled(void);
+  virtual int disable_indexes(uint mode);
+  virtual int enable_indexes(uint mode);
+  virtual int indexes_are_disabled(void);
 
   /*
     -------------------------------------------------------------------------
@@ -1152,26 +1095,23 @@ public:
   */
 
   /* For TokuDB Read Free Replication */
-    void rpl_before_write_rows();
-    void rpl_after_write_rows();
-    void rpl_before_delete_rows();
-    void rpl_after_delete_rows();
-    void rpl_before_update_rows();
-    void rpl_after_update_rows();
-    bool rpl_lookup_rows();
+  void rpl_before_write_rows();
+  void rpl_after_write_rows();
+  void rpl_before_delete_rows();
+  void rpl_after_delete_rows();
+  void rpl_before_update_rows();
+  void rpl_after_update_rows();
+  bool rpl_lookup_rows();
 
   /*
     -------------------------------------------------------------------------
     MODULE partitioning specific handler API
     -------------------------------------------------------------------------
   */
-  handler *get_handler()
-  {
-    return static_cast<handler*>(this);
-  }
+  handler *          get_handler() { return static_cast<handler *>(this); }
   Partition_handler *get_partition_handler()
   {
-    return static_cast<Partition_handler*>(this);
+    return static_cast<Partition_handler *>(this);
   }
   void set_part_info(partition_info *part_info, bool early)
   {
@@ -1179,116 +1119,91 @@ public:
   }
   uint alter_flags(uint flags MY_ATTRIBUTE((unused))) const
   {
-    return (HA_PARTITION_FUNCTION_SUPPORTED |
-            HA_FAST_CHANGE_PARTITION);
+    return (HA_PARTITION_FUNCTION_SUPPORTED | HA_FAST_CHANGE_PARTITION);
   }
 
-private:
+ private:
   /* private support functions for Partition_helper: */
-  int write_row_in_part(uint part_id, uchar *buf);
-  int update_row_in_part(uint part_id, const uchar *old_data, uchar *new_data);
-  int delete_row_in_part(uint part_id, const uchar *buf);
-  int rnd_init_in_part(uint part_id, bool table_scan);
-  int rnd_next_in_part(uint part_id, uchar *buf);
-  int rnd_end_in_part(uint part_id, bool scan);
+  int  write_row_in_part(uint part_id, uchar *buf);
+  int  update_row_in_part(uint part_id, const uchar *old_data,
+                          uchar *new_data);
+  int  delete_row_in_part(uint part_id, const uchar *buf);
+  int  rnd_init_in_part(uint part_id, bool table_scan);
+  int  rnd_next_in_part(uint part_id, uchar *buf);
+  int  rnd_end_in_part(uint part_id, bool scan);
   void position_in_last_part(uchar *ref, const uchar *record);
-  int rnd_pos_in_part(uint part_id, uchar *buf, uchar *pos);
-  int index_init_in_part(uint part, uint keynr, bool sorted);
-  int index_end_in_part(uint part);
-  int index_last_in_part(uint part, uchar *buf);
-  int index_first_in_part(uint part, uchar* buf);
-  int index_prev_in_part(uint part, uchar *buf);
-  int index_next_in_part(uint part, uchar *buf);
-  int index_next_same_in_part(uint part,
-                              uchar *buf,
-                              const uchar *key,
-                              uint length);
-  int index_read_map_in_part(uint part,
-                             uchar *buf,
-                             const uchar *key,
-                             key_part_map keypart_map,
-                             enum ha_rkey_function find_flag);
-  int index_read_idx_map_in_part(uint part,
-                                 uchar *buf,
-                                 uint index,
-                                 const uchar *key,
-                                 key_part_map keypart_map,
-                                 enum ha_rkey_function find_flag);
-  int index_read_last_map_in_part(uint part,
-                                  uchar *buf,
-                                  const uchar *key,
-                                  key_part_map keypart_map);
-  int read_range_first_in_part(uint part_id,
-                               uchar *buf,
-                               const key_range *start_key,
-                               const key_range *end_key,
-                               bool eq_range_arg,
-                               bool sorted);
-  int read_range_next_in_part(uint part, uchar *buf);
+  int  rnd_pos_in_part(uint part_id, uchar *buf, uchar *pos);
+  int  index_init_in_part(uint part, uint keynr, bool sorted);
+  int  index_end_in_part(uint part);
+  int  index_last_in_part(uint part, uchar *buf);
+  int  index_first_in_part(uint part, uchar *buf);
+  int  index_prev_in_part(uint part, uchar *buf);
+  int  index_next_in_part(uint part, uchar *buf);
+  int  index_next_same_in_part(uint part, uchar *buf, const uchar *key,
+                               uint length);
+  int  index_read_map_in_part(uint part, uchar *buf, const uchar *key,
+                              key_part_map          keypart_map,
+                              enum ha_rkey_function find_flag);
+  int  index_read_idx_map_in_part(uint part, uchar *buf, uint index,
+                                  const uchar *key, key_part_map keypart_map,
+                                  enum ha_rkey_function find_flag);
+  int  index_read_last_map_in_part(uint part, uchar *buf, const uchar *key,
+                                   key_part_map keypart_map);
+  int  read_range_first_in_part(uint part_id, uchar *buf,
+                                const key_range *start_key,
+                                const key_range *end_key, bool eq_range_arg,
+                                bool sorted);
+  int  read_range_next_in_part(uint part, uchar *buf);
   ha_checksum checksum_in_part(uint part_id) const;
-  int initialize_auto_increment(bool no_lock);
+  int         initialize_auto_increment(bool no_lock);
   /*
     Access methods to protected areas in handler to avoid adding
     friend class Partition_helper in class handler.
   */
-  THD *get_thd() const
-  {
-    return ha_thd();
-  }
-  TABLE *get_table() const
-  {
-    return table;
-  }
-  bool get_eq_range() const
-  {
-    return eq_range;
-  }
-  void set_eq_range(bool eq_range_arg)
-  {
-    eq_range= eq_range_arg;
-  }
-  void set_range_key_part(KEY_PART_INFO *key_part)
+  THD *  get_thd() const { return ha_thd(); }
+  TABLE *get_table() const { return table; }
+  bool   get_eq_range() const { return eq_range; }
+  void   set_eq_range(bool eq_range_arg) { eq_range= eq_range_arg; }
+  void   set_range_key_part(KEY_PART_INFO *key_part)
   {
     range_key_part= key_part;
   }
 };
 
 
-bool get_part_str(const char *name, std::string &result);
-partition_info *
-parse_partition_info(THD *thd, const std::string &partition_info_str);
+bool            get_part_str(const char *name, std::string &result);
+partition_info *parse_partition_info(THD *              thd,
+                                     const std::string &partition_info_str);
 
-template<typename Fn>
-class exit_scope
-{
-public:
-    exit_scope(const Fn& fn):m_fn(fn) {}
-    ~exit_scope(){ m_fn(); }
-    // Make sure NRVO is used (mandatory since C++17)
-    exit_scope(const exit_scope&);
+template <typename Fn>
+class exit_scope {
+ public:
+  exit_scope(const Fn &fn) : m_fn(fn) {}
+  ~exit_scope() { m_fn(); }
+  // Make sure NRVO is used (mandatory since C++17)
+  exit_scope(const exit_scope &);
 
-private:
-    exit_scope() = delete;
-    exit_scope& operator =(const exit_scope&) = delete;
+ private:
+  exit_scope()= delete;
+  exit_scope &operator=(const exit_scope &)= delete;
 
-    Fn m_fn;
+  Fn m_fn;
 };
 
-class exit_scope_creator
-{
-public:
-    template<typename Fn>
-    exit_scope<Fn> operator << (const Fn &fn)
-    {
-        return exit_scope<Fn>(fn);
-    }
+class exit_scope_creator {
+ public:
+  template <typename Fn>
+  exit_scope<Fn> operator<<(const Fn &fn)
+  {
+    return exit_scope<Fn>(fn);
+  }
 };
 
 #define EXIT_SCOPE_CREATE_UNIQ_NAME2(line) exit_scope_guard_##line
 #define EXIT_SCOPE_CREATE_UNIQ_NAME(line) EXIT_SCOPE_CREATE_UNIQ_NAME2(line)
-#define EXIT_SCOPE \
-    const auto  &EXIT_SCOPE_CREATE_UNIQ_NAME(__LINE__) = \
-    exit_scope_creator() << [&]()
+#define EXIT_SCOPE                                                        \
+  const auto &EXIT_SCOPE_CREATE_UNIQ_NAME(__LINE__)= exit_scope_creator() \
+                                                     << [&]()
 
-} // namespace native_part
+}  // namespace native_part
 #endif /* PARTITION_BASE_INCLUDED */

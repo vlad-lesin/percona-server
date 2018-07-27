@@ -3659,7 +3659,7 @@ void free_blob_buffers_and_reset(TABLE *table, uint32 size)
 ulong get_form_pos(File file, uchar *head)
 {
   uchar *pos, *buf;
-  uint names, length;
+  uint   names, length;
   ulong ret_value=0;
   DBUG_ENTER("get_form_pos");
 

@@ -24,18 +24,18 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #ident "Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved."
 
 #include "hatoku_hton.h"
-#include "hatoku_cmp.h"
 #include "tokudb_buffer.h"
 #include "tokudb_status.h"
-#include "tokudb_card.h"
 #include "ha_tokudb.h"
 #include "ha_tokupart.h"
-#include "sql_db.h"
-#include "sql_table.h"
-#include "table.h"
+#include "hatoku_cmp.h"
 #include "partition_info.h"
 #include "partitioning/partition_base.h"
+#include "sql_db.h"
 #include "sql_parse.h"
+#include "sql_table.h"
+#include "table.h"
+#include "tokudb_card.h"
 
 #include "mysql/psi/mysql_file.h"
 
@@ -7656,8 +7656,7 @@ cleanup:
     return error;
 }
 
-
-int ha_tokudb::delete_non_partitioned_table(const char *name) {
+int ha_tokudb::delete_non_partitioned_table(const char* name) {
     TOKUDB_HANDLER_DBUG_ENTER("%s", name);
     TOKUDB_SHARE* share = TOKUDB_SHARE::get_share(name, NULL, false);
     if (share) {
@@ -7682,30 +7681,29 @@ int ha_tokudb::delete_non_partitioned_table(const char *name) {
     TOKUDB_HANDLER_DBUG_RETURN(error);
 }
 
-
 int ha_tokudb::delete_rename_partitioned_table(
-    const char *from, const char *to, const std::string &partition_info_str) {
-
+    const char* from,
+    const char* to,
+    const std::string& partition_info_str) {
     THD* thd = ha_thd();
     DBUG_ASSERT(thd);
-    MEM_ROOT *mem_root = thd->mem_root;
+    MEM_ROOT* mem_root = thd->mem_root;
 
-    partition_info *part_info =
+    partition_info* part_info =
         native_part::parse_partition_info(ha_thd(), partition_info_str);
     ha_tokupart file(tokudb_hton, nullptr);
     if (file.init_partitioning(mem_root))
-        return DB_NOTFOUND; // TODO: return correct error code here
+        return DB_NOTFOUND;  // TODO: return correct error code here
 
     file.set_part_info(part_info, false);
     if (file.initialize_partition(mem_root))
-        return DB_NOTFOUND; // TODO: return correct error code here
+        return DB_NOTFOUND;  // TODO: return correct error code here
 
     if (to)
         return file.rename_table(from, to);
 
     return file.delete_table(from);
 }
-
 
 //
 // Drops table
@@ -7715,17 +7713,17 @@ int ha_tokudb::delete_rename_partitioned_table(
 //      0 on success
 //      error otherwise
 //
-int ha_tokudb::delete_table(const char *name) {
+int ha_tokudb::delete_table(const char* name) {
     DBUG_ASSERT(name);
     std::string partition_info_str;
     if (!native_part::get_part_str(name, partition_info_str))
-        return DB_NOTFOUND; // TODO: set correct error code here
+        return DB_NOTFOUND;  // TODO: set correct error code here
     if (partition_info_str.empty())
         return delete_non_partitioned_table(name);
     return delete_rename_partitioned_table(name, nullptr, partition_info_str);
 }
 
-static bool tokudb_check_db_dir_exist_from_table_name(const char *table_name) {
+static bool tokudb_check_db_dir_exist_from_table_name(const char* table_name) {
     DBUG_ASSERT(table_name);
     bool mysql_dir_exists;
     char db_name[FN_REFLEN];
@@ -7753,7 +7751,7 @@ static bool tokudb_check_db_dir_exist_from_table_name(const char *table_name) {
     return mysql_dir_exists;
 }
 
-int ha_tokudb::rename_non_partitioned_table(const char *from, const char *to) {
+int ha_tokudb::rename_non_partitioned_table(const char* from, const char* to) {
     TOKUDB_HANDLER_DBUG_ENTER("%s %s", from, to);
     TOKUDB_SHARE* share = TOKUDB_SHARE::get_share(from, NULL, false);
     if (share) {
@@ -7798,17 +7796,16 @@ int ha_tokudb::rename_non_partitioned_table(const char *from, const char *to) {
 //      0 on success
 //      error otherwise
 //
-int ha_tokudb::rename_table(const char *from, const char *to) {
+int ha_tokudb::rename_table(const char* from, const char* to) {
     DBUG_ASSERT(from);
     DBUG_ASSERT(to);
     std::string partition_info_str;
     if (!native_part::get_part_str(from, partition_info_str))
-        return DB_NOTFOUND; // TODO: set correct error code here
+        return DB_NOTFOUND;  // TODO: set correct error code here
     if (partition_info_str.empty())
         return rename_non_partitioned_table(from, to);
     return delete_rename_partitioned_table(from, to, partition_info_str);
 }
-
 
 /*
   Returns estimate on number of seeks it will take to read through the table
@@ -9044,8 +9041,8 @@ bool ha_tokudb::rpl_lookup_rows() {
 #include "ha_tokudb_mrr_mysql.cc"
 
 // handlerton
-#include "hatoku_hton.cc"
 #include "ha_tokupart.cc"
+#include "hatoku_hton.cc"
 
 // generate template functions
 namespace tokudb {

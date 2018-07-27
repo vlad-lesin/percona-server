@@ -52,18 +52,16 @@ typedef struct savepoint_info {
     bool in_sub_stmt;
 } *SP_INFO, SP_INFO_T;
 
-static handler* tokudb_create_handler(
-    handlerton* hton,
-    TABLE_SHARE* table,
-    MEM_ROOT* mem_root);
+static handler* tokudb_create_handler(handlerton* hton,
+                                      TABLE_SHARE* table,
+                                      MEM_ROOT* mem_root);
 
 /** Return partitioning flags. */
 static uint tokudb_partition_flags();
 
-static void tokudb_print_error(
-    const DB_ENV* db_env,
-    const char* db_errpfx,
-    const char* buffer);
+static void tokudb_print_error(const DB_ENV* db_env,
+                               const char* db_errpfx,
+                               const char* buffer);
 static void tokudb_cleanup_log_files(void);
 static int tokudb_end(handlerton* hton, ha_panic_function type);
 static bool tokudb_flush_logs(handlerton* hton, bool binlog_group_commit);
@@ -656,27 +654,24 @@ static int tokudb_done_func(TOKUDB_UNUSED(void* p)) {
     TOKUDB_DBUG_RETURN(0);
 }
 
-static handler* tokudb_create_handler(
-    handlerton* hton,
-    TABLE_SHARE* table,
-    MEM_ROOT* mem_root) {
-
-    if (table && table->db_type() == tokudb_hton &&
-        table->partition_info_str && table->partition_info_str_len) {
+static handler* tokudb_create_handler(handlerton* hton,
+                                      TABLE_SHARE* table,
+                                      MEM_ROOT* mem_root) {
+    if (table && table->db_type() == tokudb_hton && table->partition_info_str &&
+        table->partition_info_str_len) {
         ha_tokupart* file = new (mem_root) ha_tokupart(hton, table);
-        if (file && file->init_partitioning(mem_root))
-        {
+        if (file && file->init_partitioning(mem_root)) {
             delete file;
-            return(NULL);
+            return (NULL);
         }
-        return(file);
+        return (file);
     }
 
-    return new(mem_root) ha_tokudb(hton, table);
+    return new (mem_root) ha_tokudb(hton, table);
 }
 
 static uint tokudb_partition_flags() {
-    return(HA_CAN_EXCHANGE_PARTITION | HA_CANNOT_PARTITION_FK);
+    return (HA_CAN_EXCHANGE_PARTITION | HA_CANNOT_PARTITION_FK);
 }
 
 int tokudb_end(TOKUDB_UNUSED(handlerton* hton),

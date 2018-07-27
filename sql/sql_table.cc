@@ -2974,21 +2974,22 @@ bool quick_rm_table(THD *thd, handlerton *base, const char *db,
     storage engine to read some info from the file
     (for example, partition info).
   */
-  size_t path_length= build_table_filename(path, sizeof(path) - 1,
-                                           db, table_name, reg_ext, flags);
+  size_t path_length= build_table_filename(path, sizeof(path) - 1, db,
+                                           table_name, reg_ext, flags);
   strncpy(frm_path, path, sizeof(frm_path) - 1);
-  path[path_length - reg_ext_length]= '\0'; // Remove reg_ext
+  path[path_length - reg_ext_length]= '\0';  // Remove reg_ext
   if (flags & NO_HA_TABLE)
   {
-    handler *file= get_new_handler((TABLE_SHARE*) 0, thd->mem_root, base);
-    if (!file) {
+    handler *file= get_new_handler((TABLE_SHARE *)0, thd->mem_root, base);
+    if (!file)
+    {
       error|= true;
       goto exit;
     }
-    (void) file->ha_create_handler_files(path, NULL, CHF_DELETE_FLAG, NULL);
+    (void)file->ha_create_handler_files(path, NULL, CHF_DELETE_FLAG, NULL);
     delete file;
   }
-  if (!(flags & (FRM_ONLY|NO_HA_TABLE)))
+  if (!(flags & (FRM_ONLY | NO_HA_TABLE)))
     error|= ha_delete_table(current_thd, base, path, db, table_name, 0);
 exit:
   if (mysql_file_delete(key_file_frm, frm_path, MYF(0)))

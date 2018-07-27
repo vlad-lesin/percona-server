@@ -41,8 +41,8 @@
 #include "mysql/thread_pool_priv.h"
 #include "mysys_err.h"
 #include "sql_audit.h"
-#include "sql_table.h"
 #include "sql_partition.h"
+#include "sql_table.h"
 
 // Both MySQL and RocksDB define the same constant. To avoid compilation errors
 // till we make the fix in RocksDB, we'll temporary undefine it here.
@@ -65,6 +65,7 @@
 /* MyRocks includes */
 #include "./event_listener.h"
 #include "./ha_rocksdb_proto.h"
+#include "./ha_rockspart.h"
 #include "./logger.h"
 #include "./rdb_cf_manager.h"
 #include "./rdb_cf_options.h"
@@ -74,7 +75,6 @@
 #include "./rdb_mutex_wrapper.h"
 #include "./rdb_psi.h"
 #include "./rdb_threads.h"
-#include "./ha_rockspart.h"
 
 // Internal MySQL APIs not exposed in any header.
 extern "C" {
@@ -3839,9 +3839,7 @@ static rocksdb::Status check_rocksdb_options_compatibility(
   return status;
 }
 
-static uint rocksdb_partition_flags() {
-    return(HA_CANNOT_PARTITION_FK);
-}
+static uint rocksdb_partition_flags() { return (HA_CANNOT_PARTITION_FK); }
 
 /*
   Storage Engine initialization function, invoked when plugin is loaded.
@@ -3925,10 +3923,9 @@ static int rocksdb_init_func(void *const p) {
 
   rocksdb_hton->partition_flags = rocksdb_partition_flags;
 
-
   DBUG_ASSERT(!mysqld_embedded);
 
-  if (rocksdb_db_options->max_open_files > (long) open_files_limit) {
+  if (rocksdb_db_options->max_open_files > (long)open_files_limit) {
     sql_print_information("RocksDB: rocksdb_max_open_files should not be "
                           "greater than the open_files_limit, effective value "
                           "of rocksdb_max_open_files is being set to "
@@ -4778,15 +4775,14 @@ static handler *rocksdb_create_handler(my_core::handlerton *const hton,
                                        my_core::MEM_ROOT *const mem_root) {
 
   if (table_arg && table_arg->db_type() == rocksdb_hton &&
-        table_arg->partition_info_str && table_arg->partition_info_str_len) {
-        ha_rockspart* file = new (mem_root) ha_rockspart(hton, table_arg);
-        if (file && file->init_partitioning(mem_root))
-        {
-            delete file;
-            return(NULL);
-        }
-        return(file);
+      table_arg->partition_info_str && table_arg->partition_info_str_len) {
+    ha_rockspart *file = new (mem_root) ha_rockspart(hton, table_arg);
+    if (file && file->init_partitioning(mem_root)) {
+      delete file;
+      return (NULL);
     }
+    return (file);
+  }
 
   return new (mem_root) ha_rocksdb(hton, table_arg);
 }
@@ -4835,8 +4831,8 @@ bool ha_rocksdb::init_with_fields() {
   const uint pk = table_share->primary_key;
   if (pk != MAX_KEY) {
     const uint key_parts = table_share->key_info[pk].user_defined_key_parts;
-    check_keyread_allowed(m_pk_can_be_decoded, table_share,
-      pk /*PK*/, key_parts - 1, true);
+    check_keyread_allowed(m_pk_can_be_decoded, table_share, pk /*PK*/,
+                          key_parts - 1, true);
   } else
     m_pk_can_be_decoded = false;
 
@@ -6886,9 +6882,8 @@ error:
 */
 
 bool ha_rocksdb::check_keyread_allowed(bool &pk_can_be_decoded,
-                                       const TABLE_SHARE *table_share,
-                                       uint inx, uint part,
-                                       bool all_parts) {
+                                       const TABLE_SHARE *table_share, uint inx,
+                                       uint part, bool all_parts) {
   bool res = true;
   KEY *const key_info = &table_share->key_info[inx];
 
@@ -7227,15 +7222,15 @@ int ha_rocksdb::read_row_from_secondary_key(uchar *const buf,
 */
 
 ulong ha_rocksdb::index_flags(bool &pk_can_be_decoded,
-                              const TABLE_SHARE *table_share,
-                              uint inx, uint part, bool all_parts) {
+                              const TABLE_SHARE *table_share, uint inx,
+                              uint part, bool all_parts) {
   DBUG_ENTER_FUNC();
 
-  ulong base_flags = HA_READ_NEXT | // doesn't seem to be used
+  ulong base_flags = HA_READ_NEXT |  // doesn't seem to be used
                      HA_READ_ORDER | HA_READ_RANGE | HA_READ_PREV;
 
-  if (check_keyread_allowed(
-    pk_can_be_decoded, table_share, inx, part, all_parts))
+  if (check_keyread_allowed(pk_can_be_decoded, table_share, inx, part,
+                            all_parts))
     base_flags |= HA_KEYREAD_ONLY;
 
   if (inx == table_share->primary_key) {
@@ -10194,28 +10189,27 @@ int ha_rocksdb::delete_non_partitioned_table(const char *const tablename) {
   DBUG_RETURN(HA_EXIT_SUCCESS);
 }
 
-static int init_partition_handler(THD *thd,
-                                  const std::string &partition_string,
+static int init_partition_handler(THD *thd, const std::string &partition_string,
                                   ha_rockspart &file) {
   DBUG_ASSERT(thd);
   MEM_ROOT *mem_root = thd->mem_root;
 
   partition_info *part_info =
-    native_part::parse_partition_info(thd, partition_string);
+      native_part::parse_partition_info(thd, partition_string);
 
   if (file.init_partitioning(mem_root))
-    return HA_ERR_NO_SUCH_TABLE; // TODO: return correct error code here
+    return HA_ERR_NO_SUCH_TABLE;  // TODO: return correct error code here
 
   file.set_part_info(part_info, false);
 
   if (file.initialize_partition(mem_root))
-    return HA_ERR_NO_SUCH_TABLE; // TODO: return correct error code here
+    return HA_ERR_NO_SUCH_TABLE;  // TODO: return correct error code here
 
   return 0;
 }
 
 int ha_rocksdb::delete_partitioned_table(
-  const char *const tablename, const std::string &partition_info_str) {
+    const char *const tablename, const std::string &partition_info_str) {
   ha_rockspart file(rocksdb_hton, nullptr);
   int result = init_partition_handler(ha_thd(), partition_info_str, file);
   if (result)
@@ -10227,9 +10221,9 @@ int ha_rocksdb::delete_table(const char *const tablename) {
   DBUG_ASSERT(tablename);
   std::string partition_info_str;
   if (!native_part::get_part_str(tablename, partition_info_str))
-      return HA_ERR_NO_SUCH_TABLE; // TODO: set correct error code here
+    return HA_ERR_NO_SUCH_TABLE;  // TODO: set correct error code here
   if (partition_info_str.empty())
-      return delete_non_partitioned_table(tablename);
+    return delete_non_partitioned_table(tablename);
   return delete_partitioned_table(tablename, partition_info_str);
 }
 
@@ -10371,9 +10365,9 @@ int ha_rocksdb::rename_table(const char *const from, const char *const to) {
   DBUG_ASSERT(to);
   std::string partition_info_str;
   if (!native_part::get_part_str(from, partition_info_str))
-      return HA_ERR_NO_SUCH_TABLE; // TODO: set correct error code here
+    return HA_ERR_NO_SUCH_TABLE;  // TODO: set correct error code here
   if (partition_info_str.empty())
-      return rename_non_partitioned_table(from, to);
+    return rename_non_partitioned_table(from, to);
   return rename_partitioned_table(from, to, partition_info_str);
 }
 
