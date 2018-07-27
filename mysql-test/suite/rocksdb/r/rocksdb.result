@@ -301,8 +301,6 @@ DROP TABLE t12;
 # MDEV-3964: Assertion `!pk_descr' fails in ha_rocksdb::open on adding partitions ...
 #
 create table t14 (pk int primary key) engine=RocksDB partition by hash(pk) partitions 2;
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t14', is deprecated and will be removed in a future release. Please use native partitioning instead.
 drop table t14;
 #
 # MDEV-3960: Server crashes on running DISCARD TABLESPACE on a RocksDB table
@@ -2628,8 +2626,6 @@ set AUTOCOMMIT=1;
 # Issue#213 Crash on LOCK TABLES + partitions
 #
 CREATE TABLE t1(a INT,b INT,KEY (b)) engine=rocksdb PARTITION BY HASH(a) PARTITIONS 2;
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t1', is deprecated and will be removed in a future release. Please use native partitioning instead.
 INSERT INTO t1(a)VALUES (20010101101010.999949);
 ERROR 22003: Out of range value for column 'a' at row 1
 set @orig_sql_mode=@@session.sql_mode;
