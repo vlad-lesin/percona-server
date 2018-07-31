@@ -1177,36 +1177,5 @@ bool            get_part_str_for_path(const char *path, std::string &result);
 bool            get_part_str_for_table(const char *name, std::string &result);
 partition_info *parse_partition_info(THD *              thd,
                                      const std::string &partition_info_str);
-
-template <typename Fn>
-class exit_scope {
- public:
-  exit_scope(const Fn &fn) : m_fn(fn) {}
-  ~exit_scope() { m_fn(); }
-  // Make sure NRVO is used (mandatory since C++17)
-  exit_scope(const exit_scope &);
-
- private:
-  exit_scope()= delete;
-  exit_scope &operator=(const exit_scope &)= delete;
-
-  Fn m_fn;
-};
-
-class exit_scope_creator {
- public:
-  template <typename Fn>
-  exit_scope<Fn> operator<<(const Fn &fn)
-  {
-    return exit_scope<Fn>(fn);
-  }
-};
-
-#define EXIT_SCOPE_CREATE_UNIQ_NAME2(line) exit_scope_guard_##line
-#define EXIT_SCOPE_CREATE_UNIQ_NAME(line) EXIT_SCOPE_CREATE_UNIQ_NAME2(line)
-#define EXIT_SCOPE                                                        \
-  const auto &EXIT_SCOPE_CREATE_UNIQ_NAME(__LINE__)= exit_scope_creator() \
-                                                     << [&]()
-
 }  // namespace native_part
 #endif /* PARTITION_BASE_INCLUDED */

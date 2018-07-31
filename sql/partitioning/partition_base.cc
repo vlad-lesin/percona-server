@@ -72,6 +72,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <boost/scope_exit.hpp>
 
 
 #include "debug_sync.h"
@@ -168,7 +169,7 @@ bool get_part_str_for_path(const char *path, std::string &result)
   File file= mysql_file_open(key_file_frm, path, O_RDONLY | O_SHARE, MYF(0));
   if (file < 0)
     return false;
-  EXIT_SCOPE { mysql_file_close(file, MYF(MY_WME)); };
+  BOOST_SCOPE_EXIT_ALL(&) { mysql_file_close(file, MYF(MY_WME)); };
 
   // Next, we read the header and do some basic verification of the
   // header fields.
@@ -271,7 +272,7 @@ partition_info *parse_partition_info(THD *              thd,
 
   thd->variables.character_set_client= system_charset_info;
   thd->lex= &lex;
-  EXIT_SCOPE
+  BOOST_SCOPE_EXIT_ALL(&)
   {
     thd->lex= old_lex;
     thd->variables.character_set_client= old_character_set_client;
@@ -293,7 +294,7 @@ partition_info *parse_partition_info(THD *              thd,
 
   thd->m_digest= nullptr;
   thd->m_statement_psi= nullptr;
-  EXIT_SCOPE
+  BOOST_SCOPE_EXIT_ALL(&)
   {
     thd->free_items();
     thd->m_digest= parent_digest;
