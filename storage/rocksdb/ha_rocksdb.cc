@@ -10220,7 +10220,7 @@ int ha_rocksdb::delete_partitioned_table(
 int ha_rocksdb::delete_table(const char *const tablename) {
   DBUG_ASSERT(tablename);
   std::string partition_info_str;
-  if (!native_part::get_part_str(tablename, partition_info_str))
+  if (!native_part::get_part_str_for_table(tablename, partition_info_str))
     return HA_ERR_NO_SUCH_TABLE;  // TODO: set correct error code here
   if (partition_info_str.empty())
     return delete_non_partitioned_table(tablename);
@@ -10364,7 +10364,7 @@ int ha_rocksdb::rename_table(const char *const from, const char *const to) {
   DBUG_ASSERT(from);
   DBUG_ASSERT(to);
   std::string partition_info_str;
-  if (!native_part::get_part_str(from, partition_info_str))
+  if (!native_part::get_part_str_for_table(from, partition_info_str))
     return HA_ERR_NO_SUCH_TABLE;  // TODO: set correct error code here
   if (partition_info_str.empty())
     return rename_non_partitioned_table(from, to);

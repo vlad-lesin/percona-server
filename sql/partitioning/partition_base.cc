@@ -151,20 +151,8 @@ static void get_db_table_name_from_canonical_name(const char *canonical_name,
   table_name_buf[table_name_size]= '\0';
 }
 
-
-bool get_part_str(const char *name, std::string &result)
+bool get_part_str_for_path(const char *path, std::string &result)
 {
-  char db_name[FN_REFLEN + 1];
-  char table_name[FN_REFLEN + 1];
-  get_db_table_name_from_canonical_name(name, db_name, sizeof(db_name),
-                                        table_name, sizeof(table_name));
-
-  // Prepare the path to the .FRM file and open the file
-  char    path[FN_REFLEN + 1];  //< Path to .FRM file
-  my_bool temp_table= (my_bool)is_prefix(table_name, tmp_file_prefix);
-  build_table_filename(path, sizeof(path) - 1, db_name, table_name, reg_ext,
-                       temp_table ? FN_IS_TMP : 0);
-
   // Check for .frm file existence
   MY_STAT frm_stat_info;
   if (!my_stat(path, &frm_stat_info, MYF(0)))
@@ -185,8 +173,13 @@ bool get_part_str(const char *name, std::string &result)
   // Next, we read the header and do some basic verification of the
   // header fields.
   uchar head[64];
-  if (mysql_file_read(file, head, sizeof(head), MYF(MY_NABP)) ||
-      head[0] != (uchar)254 || head[1] != 1 ||
+  if (mysql_file_read(file, head, sizeof(head), MYF(MY_NABP)))
+    return false;
+
+  if (!strncmp((char *)head, "TYPE=VIEW\n", strlen("TYPE=VIEW\n")))
+    return true;
+
+  if (head[0] != (uchar)254 || head[1] != 1 ||
       !(head[2] == FRM_VER || head[2] == FRM_VER + 1 ||
         (head[2] >= FRM_VER + 3 && head[2] <= FRM_VER + 4)))
     // Upon failure, return NULL, but here, we have to close the file first.
@@ -240,6 +233,22 @@ bool get_part_str(const char *name, std::string &result)
   }
 
   return true;
+}
+
+bool get_part_str_for_table(const char *name, std::string &result)
+{
+  char db_name[FN_REFLEN + 1];
+  char table_name[FN_REFLEN + 1];
+  get_db_table_name_from_canonical_name(name, db_name, sizeof(db_name),
+                                        table_name, sizeof(table_name));
+
+  // Prepare the path to the .FRM file and open the file
+  char    path[FN_REFLEN + 1];  //< Path to .FRM file
+  my_bool temp_table= (my_bool)is_prefix(table_name, tmp_file_prefix);
+  build_table_filename(path, sizeof(path) - 1, db_name, table_name, reg_ext,
+                       temp_table ? FN_IS_TMP : 0);
+
+  return get_part_str_for_path(path, result);
 }
 
 
@@ -5790,6 +5799,15 @@ void Partition_base::rpl_after_update_rows()
 bool Partition_base::rpl_lookup_rows()
 {
   return m_file[0]->rpl_lookup_rows();
+}
+
+/*
+  Query storage engine to see if it can support handling specific replication
+  method in its current configuration.
+*/
+bool Partition_base::rpl_can_handle_stm_event() const
+{
+  return m_file[0]->rpl_can_handle_stm_event();
 }
 
 }  // namespace native_part

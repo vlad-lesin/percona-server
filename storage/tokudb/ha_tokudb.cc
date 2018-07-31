@@ -7716,7 +7716,7 @@ int ha_tokudb::delete_rename_partitioned_table(
 int ha_tokudb::delete_table(const char* name) {
     DBUG_ASSERT(name);
     std::string partition_info_str;
-    if (!native_part::get_part_str(name, partition_info_str))
+    if (!native_part::get_part_str_for_table(name, partition_info_str))
         return DB_NOTFOUND;  // TODO: set correct error code here
     if (partition_info_str.empty())
         return delete_non_partitioned_table(name);
@@ -7800,7 +7800,7 @@ int ha_tokudb::rename_table(const char* from, const char* to) {
     DBUG_ASSERT(from);
     DBUG_ASSERT(to);
     std::string partition_info_str;
-    if (!native_part::get_part_str(from, partition_info_str))
+    if (!native_part::get_part_str_for_table(from, partition_info_str))
         return DB_NOTFOUND;  // TODO: set correct error code here
     if (partition_info_str.empty())
         return rename_non_partitioned_table(from, to);

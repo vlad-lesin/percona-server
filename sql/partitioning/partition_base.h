@@ -1103,6 +1103,9 @@ class Partition_base : public handler,
   void rpl_after_update_rows();
   bool rpl_lookup_rows();
 
+  /* For MyRocks Writebatch Replication validation */
+  bool rpl_can_handle_stm_event() const;
+
   /*
     -------------------------------------------------------------------------
     MODULE partitioning specific handler API
@@ -1170,8 +1173,8 @@ class Partition_base : public handler,
   }
 };
 
-
-bool            get_part_str(const char *name, std::string &result);
+bool            get_part_str_for_path(const char *path, std::string &result);
+bool            get_part_str_for_table(const char *name, std::string &result);
 partition_info *parse_partition_info(THD *              thd,
                                      const std::string &partition_info_str);
 

@@ -2,6 +2,30 @@
 
 --source include/have_rocksdb.inc
 
+CREATE TABLE t1 (i INT, j INT, k INT, PRIMARY KEY (i)) ENGINE = ROCKSDB PARTITION BY KEY(i) PARTITIONS 4;
+ALTER TABLE t1 CHECK PARTITION p1;
+DROP TABLE t1;
+--exit
+
+#
+# Test crash recovery with partitioned tables
+#
+CREATE TABLE t1 (i INT, j INT, k INT, PRIMARY KEY (i), KEY(j)) ENGINE = ROCKSDB PARTITION BY KEY(i) PARTITIONS 4;
+
+--exec echo "restart" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
+SET SESSION debug="+d,crash_during_index_creation_partition";
+--error 2013
+ALTER TABLE t1 ADD INDEX kij(i,j), ALGORITHM=INPLACE;
+
+--enable_reconnect
+--source include/wait_until_connected_again.inc
+SET SESSION debug="-d,crash_during_index_creation_partition";
+
+SHOW CREATE TABLE t1;
+
+drop table t1;
+--exit
+
 
 --let $MYSQLD_DATADIR=`select @@datadir`
 
