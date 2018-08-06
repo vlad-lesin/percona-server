@@ -35,6 +35,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #include "sql/handler.h"
 #include "sql/table.h"
 #include "sql/sql_class.h"
+#include "sql/sql_lex.h"
 #include "sql/sql_show.h"
 #include "sql/item_cmpfunc.h"
 #include "sql/binlog.h"

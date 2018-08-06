@@ -49,34 +49,34 @@ const size_t error_buffer_max_size = 1024;
 ulonglong   cache_size = 0;
 uint        cachetable_pool_threads = 0;
 int         cardinality_scale_percent = 0;
-bool        checkpoint_on_flush_logs = FALSE;
+bool        checkpoint_on_flush_logs = false;
 uint        checkpoint_pool_threads = 0;
 uint        checkpointing_period = 0;
 ulong       cleaner_iterations = 0;
 ulong       cleaner_period = 0;
 uint        client_pool_threads = 0;
-bool        compress_buffers_before_eviction = TRUE;
+bool        compress_buffers_before_eviction = false;
 char*       data_dir = NULL;
 ulong       debug = 0;
 #if defined(TOKUDB_DEBUG) && TOKUDB_DEBUG
 // used to control background job manager
-bool        debug_pause_background_job_manager = FALSE;
+bool        debug_pause_background_job_manager = false;
 #endif  // defined(TOKUDB_DEBUG) && TOKUDB_DEBUG
-bool        directio = FALSE;
-bool        enable_partial_eviction = TRUE;
+bool        directio = false;
+bool        enable_partial_eviction = true;
 // file system reserve as a percentage of total disk space
 int         fs_reserve_percent = 0;
 uint        fsync_log_period = 0;
 char*       log_dir = NULL;
 ulonglong   max_lock_memory = 0;
 uint        read_status_frequency = 0;
-bool        strip_frm_data = FALSE;
+bool        strip_frm_data = false;
 char*       tmp_dir = NULL;
 uint        write_status_frequency = 0;
-bool        dir_per_db = TRUE;
+bool        dir_per_db = true;
 char*       version = (char*) TOKUDB_VERSION_STR;
 
-bool        check_jemalloc = TRUE;
+bool        check_jemalloc = true;
 
 static MYSQL_SYSVAR_ULONGLONG(
     cache_size,
@@ -121,7 +121,7 @@ static MYSQL_SYSVAR_BOOL(
     "checkpoint on flush logs",
     NULL,
     NULL,
-    FALSE);
+    false);
 
 static MYSQL_SYSVAR_UINT(
     checkpoint_pool_threads,
@@ -137,7 +137,7 @@ static MYSQL_SYSVAR_UINT(
 
 static void checkpointing_period_update(
     TOKUDB_UNUSED(THD* thd),
-    TOKUDB_UNUSED(st_mysql_sys_var* sys_var),
+    TOKUDB_UNUSED(SYS_VAR* sys_var),
     void* var,
     const void* save) {
     uint* cp = (uint*)var;
@@ -159,7 +159,7 @@ static MYSQL_SYSVAR_UINT(
     0);
 
 static void cleaner_iterations_update(TOKUDB_UNUSED(THD* thd),
-                                      TOKUDB_UNUSED(st_mysql_sys_var* sys_var),
+                                      TOKUDB_UNUSED(SYS_VAR* sys_var),
                                       void* var,
                                       const void* save) {
     ulong* ci = (ulong*)var;
@@ -181,7 +181,7 @@ static MYSQL_SYSVAR_ULONG(
     0);
 
 static void cleaner_period_update(TOKUDB_UNUSED(THD* thd),
-                                  TOKUDB_UNUSED(st_mysql_sys_var* sys_var),
+                                  TOKUDB_UNUSED(SYS_VAR* sys_var),
                                   void* var,
                                   const void* save) {
     ulong* cp = (ulong*)var;
@@ -221,7 +221,7 @@ static MYSQL_SYSVAR_BOOL(
     "enable in-memory buffer compression before partial eviction",
     NULL,
     NULL,
-    TRUE);
+    true);
 
 static MYSQL_SYSVAR_STR(
     data_dir,
@@ -252,7 +252,7 @@ static MYSQL_SYSVAR_BOOL(
     "debug : pause the background job manager",
     NULL,
     NULL,
-    FALSE);
+    false);
 #endif  // defined(TOKUDB_DEBUG) && TOKUDB_DEBUG
 
 static MYSQL_SYSVAR_BOOL(
@@ -261,11 +261,11 @@ static MYSQL_SYSVAR_BOOL(
     PLUGIN_VAR_READONLY, "enable direct i/o ",
     NULL,
     NULL,
-    FALSE);
+    false);
 
 static void enable_partial_eviction_update(
     TOKUDB_UNUSED(THD* thd),
-    TOKUDB_UNUSED(st_mysql_sys_var* sys_var),
+    TOKUDB_UNUSED(SYS_VAR* sys_var),
     void* var,
     const void* save) {
     bool* epe = (bool*)var;
@@ -281,7 +281,7 @@ static MYSQL_SYSVAR_BOOL(
     "enable partial node eviction",
     NULL,
     enable_partial_eviction_update,
-    TRUE);
+    true);
 
 static MYSQL_SYSVAR_INT(
     fs_reserve_percent,
@@ -296,7 +296,7 @@ static MYSQL_SYSVAR_INT(
     0);
 
 static void fsync_log_period_update(TOKUDB_UNUSED(THD* thd),
-                                    TOKUDB_UNUSED(st_mysql_sys_var* sys_var),
+                                    TOKUDB_UNUSED(SYS_VAR* sys_var),
                                     void* var,
                                     const void* save) {
     uint* flp = (uint*)var;
@@ -356,7 +356,7 @@ static MYSQL_SYSVAR_BOOL(
     "strip .frm data from metadata file(s)",
     NULL,
     NULL,
-    FALSE);
+    false);
 
 static MYSQL_SYSVAR_STR(
     tmp_dir,
@@ -390,7 +390,7 @@ static MYSQL_SYSVAR_UINT(
 
 static void tokudb_dir_per_db_update(
     TOKUDB_UNUSED(THD* thd),
-    TOKUDB_UNUSED(struct st_mysql_sys_var* sys_var),
+    TOKUDB_UNUSED(struct SYS_VAR* sys_var),
     void* var,
     const void* save) {
     bool *value = (bool *) var;
@@ -400,7 +400,7 @@ static void tokudb_dir_per_db_update(
 
 static MYSQL_SYSVAR_BOOL(dir_per_db, dir_per_db,
     0, "TokuDB store ft files in db directories",
-    NULL, tokudb_dir_per_db_update, TRUE);
+    NULL, tokudb_dir_per_db_update, true);
 
 static MYSQL_SYSVAR_BOOL(
     check_jemalloc,
@@ -409,7 +409,7 @@ static MYSQL_SYSVAR_BOOL(
     "check if jemalloc is linked and transparent huge pages are disabled",
     NULL,
     NULL,
-    TRUE);
+    true);
 
 
 //******************************************************************************
@@ -521,7 +521,7 @@ static MYSQL_THDVAR_BOOL(
     true);
 
 static void checkpoint_lock_update(TOKUDB_UNUSED(THD* thd),
-                                   TOKUDB_UNUSED(st_mysql_sys_var* var),
+                                   TOKUDB_UNUSED(SYS_VAR* var),
                                    void* var_ptr,
                                    const void* save) {
     bool* val = (bool*)var_ptr;
@@ -839,7 +839,7 @@ static MYSQL_THDVAR_BOOL(
     false);
 #endif  // defined(TOKU_INCLUDE_UPSERT) && TOKU_INCLUDE_UPSERT
 
-static int dir_cmd_check(THD* thd, struct st_mysql_sys_var* var,
+static int dir_cmd_check(THD* thd, struct SYS_VAR* var,
                          void* save, struct st_mysql_value* value) ;
 
 static MYSQL_THDVAR_INT(dir_cmd_last_error,
@@ -881,7 +881,7 @@ static void dir_cmd_clear_error(THD* thd) {
 }
 
 static int dir_cmd_check(THD* thd,
-                         TOKUDB_UNUSED(struct st_mysql_sys_var* var),
+                         TOKUDB_UNUSED(struct SYS_VAR* var),
                          void* save,
                          struct st_mysql_value* value) {
     int error = 0;
@@ -914,7 +914,7 @@ static int dir_cmd_check(THD* thd,
 //******************************************************************************
 // all system variables
 //******************************************************************************
-st_mysql_sys_var* system_variables[] = {
+SYS_VAR* system_variables[] = {
     // global vars
     MYSQL_SYSVAR(cache_size),
     MYSQL_SYSVAR(checkpoint_on_flush_logs),

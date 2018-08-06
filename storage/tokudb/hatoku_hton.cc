@@ -264,7 +264,7 @@ static int tokudb_init_func(void *p) {
     rwlock_t_lock_write(tokudb_hton_initialized_lock);
 
     // Initialize error logging service.
-	  if (init_logging_service_for_plugin(&reg_srv)) {
+    if (init_logging_service_for_plugin(&reg_srv, &log_bi, &log_bs)) {
         tokudb_hton_initialized_lock.unlock();
         DBUG_RETURN(true);
     }
@@ -518,10 +518,10 @@ static int tokudb_init_func(void *p) {
 
     db_env->set_update(db_env, tokudb_update_fun);
 
-    db_env_set_direct_io(tokudb::sysvars::directio == TRUE);
+    db_env_set_direct_io(tokudb::sysvars::directio == true);
 
     db_env_set_compress_buffers_before_eviction(
-        tokudb::sysvars::compress_buffers_before_eviction == TRUE);
+        tokudb::sysvars::compress_buffers_before_eviction == true);
 
     db_env->change_fsync_log_period(db_env, tokudb::sysvars::fsync_log_period);
 
@@ -625,7 +625,7 @@ error:
         db_env = 0;
     }
 
-		deinit_logging_service_for_plugin(&reg_srv);
+    deinit_logging_service_for_plugin(&reg_srv, &log_bi, &log_bs);
 
     // 3938: failed to initialized, drop the flag and lock
     tokudb_hton_initialized = 0;
@@ -639,7 +639,7 @@ static int tokudb_done_func(TOKUDB_UNUSED(void* p)) {
     toku_global_status_variables = NULL;
     tokudb::memory::free(toku_global_status_rows);
     toku_global_status_rows = NULL;
-	  deinit_logging_service_for_plugin(&reg_srv);
+    deinit_logging_service_for_plugin(&reg_srv, &log_bi, &log_bs);
     TOKUDB_DBUG_RETURN(0);
 }
 

@@ -101,6 +101,8 @@ IF(DEFINED TOKUDB_NOPATCH_CONFIG)
     ADD_DEFINITIONS("-DTOKUDB_NOPATCH_CONFIG=${TOKUDB_NOPATCH_CONFIG}")
 ENDIF()
 
+ADD_DEFINITIONS(-DLOG_COMPONENT_TAG="TokuDB")
+
 prepend_cflags_if_supported(-Wno-missing-field-initializers)
 prepend_cflags_if_supported(-Wno-shadow)
 prepend_cflags_if_supported(-Wno-undef)
