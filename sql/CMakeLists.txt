@@ -477,8 +477,11 @@ ELSE()
   SET(MYSQLD_SOURCE main.cc ${DTRACE_PROBES_ALL})
 ENDIF()
 
-LIST(APPEND MYSQLD_SOURCE partitioning/partition_base.cc)
-ADD_COMPILE_FLAGS(partitioning/partition_base.cc COMPILE_FLAGS -std=gnu++11 -Wno-deprecated-declarations)
+IF ((NOT WITHOUT_TOKUDB) OR WITH_ROCKSDB)
+  LIST(APPEND MYSQLD_SOURCE partitioning/partition_base.cc)
+  ADD_COMPILE_FLAGS(partitioning/partition_base.cc
+    COMPILE_FLAGS -std=gnu++11 -Wno-deprecated-declarations)
+ENDIF((NOT WITHOUT_TOKUDB) OR WITH_ROCKSDB)
 
 MYSQL_ADD_EXECUTABLE(mysqld
   ${MYSQLD_SOURCE} DESTINATION ${INSTALL_SBINDIR} COMPONENT Server)
