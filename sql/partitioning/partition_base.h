@@ -898,7 +898,8 @@ public:
   virtual uint max_supported_keys() const;
   virtual uint max_supported_key_parts() const;
   virtual uint max_supported_key_length() const;
-  virtual uint max_supported_key_part_length() const;
+  virtual uint max_supported_key_part_length(
+      HA_CREATE_INFO *create_info) const;
 
   /*
     All handlers in a partitioned table must have the same low_byte_first
