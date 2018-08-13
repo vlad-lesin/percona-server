@@ -17,22 +17,18 @@ validate_datadic : PS-4218 - Make .frm/schema validation optional at compile tim
 
 add_index_inplace : native partitioning
 add_index_inplace_crash : native partitioning
-#bulk_load : native partitioning
-bulk_load_rev_cf : native partitioning
-bulk_load_rev_cf_and_data : native partitioning
-bulk_load_rev_data : native partitioning
-bulk_load_unsorted : native partitioning
-bulk_load_unsorted_rev : native partitioning
-gap_lock_error : native partitioning
-get_error_message : native partitioning
-issue495 : native partitioning
+bulk_load : enable when https://jira.percona.com/browse/PS-4705 is fixed
+bulk_load_rev_cf : enable when https://jira.percona.com/browse/PS-4705 is fixed
+bulk_load_rev_cf_and_data : enable when https://jira.percona.com/browse/PS-4705 is fixed
+bulk_load_rev_data : enable when https://jira.percona.com/browse/PS-4705 is fixed
+bulk_load_unsorted : enable when https://jira.percona.com/browse/PS-4705 is fixed
+bulk_load_unsorted_rev : enable when https://jira.percona.com/browse/PS-4705 is fixed
+get_error_message : needs to be fixed
 rocksdb : native partitioning
 rocksdb_cf_per_partition : enable when https://bugs.mysql.com/bug.php?id=91763 is fixed
 rocksdb_parts : native partitioning
 show_engine : native partitioning
 tbl_opt_data_index_dir : native partitioning
-ttl_primary_with_partitions : native partitioning
-ttl_secondary_with_partitions : native partitioning
 unique_sec : native partitioning
 
 read_only_tx : needs STWCS binlog_snapshot_* patch
