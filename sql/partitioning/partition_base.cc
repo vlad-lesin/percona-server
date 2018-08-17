@@ -89,6 +89,7 @@
 #include "pfs_file_provider.h"
 #include "mysql/psi/mysql_file.h"
 
+#include <boost/scope_exit.hpp>
 
 using std::min;
 using std::max;
@@ -783,6 +784,22 @@ int Partition_base::create(
                   path,
                   parent_elem ? parent_elem->partition_name : nullptr,
                   part_elem->partition_name);
+        const char *old_data_file_name = nullptr;
+        if (part_elem->data_file_name) {
+          old_data_file_name = create_info->data_file_name;
+          create_info->data_file_name = part_elem->data_file_name;
+        }
+        const char *old_index_file_name = nullptr;
+        if (part_elem->index_file_name) {
+          old_index_file_name = create_info->data_file_name;
+          create_info->index_file_name = part_elem->index_file_name;
+        }
+        BOOST_SCOPE_EXIT_ALL(&) {
+          if (part_elem->data_file_name)
+              create_info->data_file_name = old_data_file_name;
+          if (part_elem->index_file_name)
+              create_info->index_file_name = old_index_file_name;
+        };
         // TODO: check if everything is set for the normal work
         if (/*(error= set_up_table_before_create(thd, share, name_buff,
                                                create_info, part_elem)) ||*/
