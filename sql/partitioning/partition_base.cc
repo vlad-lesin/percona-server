@@ -4960,7 +4960,7 @@ public:
     if (handler_ctx_array)
     {
       for (uint index= 0; index < m_tot_parts; index++)
-        delete handler_ctx_array[index];
+        destroy(handler_ctx_array[index]);
     }
   }
 };
