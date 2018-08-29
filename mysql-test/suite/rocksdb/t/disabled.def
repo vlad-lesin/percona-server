@@ -15,8 +15,7 @@ validate_datadic : PS-4218 - Make .frm/schema validation optional at compile tim
 
 add_index_inplace : native partitioning
 add_index_inplace_crash : native partitioning
-autoinc_crash_safe_partition : native partitioning
-bulk_load : native partitioning
+#bulk_load : native partitioning
 bulk_load_rev_cf : native partitioning
 bulk_load_rev_cf_and_data : native partitioning
 bulk_load_rev_data : native partitioning
