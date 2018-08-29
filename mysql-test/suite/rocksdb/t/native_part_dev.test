@@ -5,6 +5,51 @@
 
 --let $MYSQLD_DATADIR=`select @@datadir`
 
+--error ER_GET_ERRMSG
+CREATE TABLE t1 (id INT NOT NULL PRIMARY KEY) ENGINE=rocksdb DATA DIRECTORY =  '/foo/bar/data/';
+
+--error ER_GET_ERRMSG
+CREATE TABLE t1 (id INT NOT NULL PRIMARY KEY) ENGINE=rocksdb PARTITION BY RANGE (id)
+(
+    PARTITION P0 VALUES LESS THAN (1000)
+        DATA DIRECTORY =  '/foo/bar/data/',
+    PARTITION P1 VALUES LESS THAN (2000)
+        DATA DIRECTORY =  '/foo/bar/data/',
+    PARTITION P2 VALUES LESS THAN (MAXVALUE)
+);
+--exit
+
+--echo #
+--echo # Issue#105: key_info[secondary_key].actual_key_parts does not include primary key on partitioned tables
+--echo #
+CREATE TABLE t1 (
+ id INT PRIMARY KEY,
+ a set ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')  CHARACTER SET utf8,
+ b set ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')  CHARACTER SET utf8 default null,
+ c set ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')  CHARACTER SET utf8 not null,
+ INDEX (a),
+ INDEX (b),
+ INDEX (c)
+) ENGINE=ROCKSDB PARTITION BY key (id) partitions 2;
+
+INSERT INTO t1 (id, b, c) VALUES (28, 3, 3);
+UPDATE t1 SET id=8 WHERE c < 8 LIMIT 1;
+check table t1;
+drop table t1;
+--exit
+
+--echo #
+--echo # Issue #260: altering name to invalid value leaves table unaccessible
+--echo #
+CREATE TABLE t1 (c1 INT NOT NULL, c2 CHAR(5)) ENGINE=ROCKSDB PARTITION BY HASH(c1) PARTITIONS 4;
+INSERT INTO t1 VALUES(1,'a');
+--error ER_ERROR_ON_RENAME
+RENAME TABLE t1 TO db3.t3;
+DROP TABLE t1;
+--exit
+
+
+
 create table t1 (a int unsigned not null,
                  b int unsigned not null,
                  c int unsigned not null,
