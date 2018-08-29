@@ -478,8 +478,6 @@ Partition_base::~Partition_base()
   DBUG_VOID_RETURN;
 }
 
-// TODO: check if the function is necessary
-#if 0
 bool Partition_base::init_with_fields()
 {
   /* Partition info has not yet been initialized, just return true */
@@ -497,7 +495,6 @@ bool Partition_base::init_with_fields()
                       PARTITION_ENABLED_TABLE_FLAGS;
   return false;
 }
-#endif
 
 template<typename Fn>
 bool Partition_base::foreach_partition(const Fn& fn) {
@@ -3398,7 +3395,7 @@ int Partition_base::read_range_next_in_part(uint part, uchar * buf)
   return error;
 }
 
-bool Partition_base::has_gap_locks() const
+bool Partition_base::has_gap_locks() const noexcept
 {
   /* Pass the call to each partition */
 
@@ -4135,7 +4132,6 @@ int Partition_base::extra(enum ha_extra_function operation)
   case HA_EXTRA_NORMAL:
   case HA_EXTRA_QUICK:
   case HA_EXTRA_PREPARE_FOR_DROP:
-  case HA_EXTRA_FLUSH_CACHE:
     break;
   case HA_EXTRA_NO_READCHECK:
   {
@@ -4144,30 +4140,6 @@ int Partition_base::extra(enum ha_extra_function operation)
       Partition_base::open, so no need to do anything.
     */
     break;
-  }
-  case HA_EXTRA_CACHE:
-  {
-    prepare_extra_cache(0);
-    break;
-  }
-  case HA_EXTRA_NO_CACHE:
-  {
-    int ret= 0;
-    if (m_extra_cache_part_id != NO_CURRENT_PART_ID)
-      ret= m_file[m_extra_cache_part_id]->extra(HA_EXTRA_NO_CACHE);
-    m_extra_cache= false;
-    m_extra_cache_size= 0;
-    m_extra_prepare_for_update= false;
-    m_extra_cache_part_id= NO_CURRENT_PART_ID;
-    DBUG_RETURN(ret);
-  }
-  case HA_EXTRA_WRITE_CACHE:
-  {
-    m_extra_cache= false;
-    m_extra_cache_size= 0;
-    m_extra_prepare_for_update= false;
-    m_extra_cache_part_id= NO_CURRENT_PART_ID;
-    DBUG_RETURN(loop_extra(operation));
   }
   case HA_EXTRA_IGNORE_NO_KEY:
   case HA_EXTRA_NO_IGNORE_NO_KEY:
@@ -4302,11 +4274,12 @@ int Partition_base::reset(void)
     0                    Success
 */
 
-int Partition_base::extra_opt(enum ha_extra_function operation, ulong cachesize)
+int Partition_base::extra_opt(enum ha_extra_function /*operation*/,
+                              ulong cachesize)
 {
   DBUG_ENTER("Partition_base::extra_opt()");
 
-  DBUG_ASSERT(HA_EXTRA_CACHE == operation);
+  DBUG_ASSERT(0); //check if the function can be removed
   prepare_extra_cache(cachesize);
   DBUG_RETURN(0);
 }
@@ -4394,13 +4367,6 @@ void Partition_base::late_extra_cache(uint partition_id)
   if (!m_extra_cache && !m_extra_prepare_for_update)
     DBUG_VOID_RETURN;
   file= m_file[partition_id];
-  if (m_extra_cache)
-  {
-    if (m_extra_cache_size == 0)
-      (void) file->extra(HA_EXTRA_CACHE);
-    else
-      (void) file->extra_opt(HA_EXTRA_CACHE, m_extra_cache_size);
-  }
   if (m_extra_prepare_for_update)
   {
     (void) file->extra(HA_EXTRA_PREPARE_FOR_UPDATE);
@@ -4421,18 +4387,11 @@ void Partition_base::late_extra_cache(uint partition_id)
     NONE
 */
 
-void Partition_base::late_extra_no_cache(uint partition_id)
+void Partition_base::late_extra_no_cache(uint /*partition_id*/)
 {
-  handler *file;
   DBUG_ENTER("Partition_base::late_extra_no_cache");
-
-  if (!m_extra_cache && !m_extra_prepare_for_update)
+  DBUG_ASSERT(0); // TODO: check if the function can be removed
     DBUG_VOID_RETURN;
-  file= m_file[partition_id];
-  (void) file->extra(HA_EXTRA_NO_CACHE);
-  DBUG_ASSERT(partition_id == m_extra_cache_part_id);
-  m_extra_cache_part_id= NO_CURRENT_PART_ID;
-  DBUG_VOID_RETURN;
 }
 
 
@@ -5269,14 +5228,15 @@ uint Partition_base::max_supported_key_length() const
 }
 
 
-uint Partition_base::max_supported_key_part_length() const
+uint Partition_base::max_supported_key_part_length(
+  HA_CREATE_INFO *create_info) const
 {
   if (m_file)
-    return m_file[0]->max_supported_key_part_length();
+    return m_file[0]->max_supported_key_part_length(create_info);
   return
     std::unique_ptr<handler, Destroy_only<handler>>(
       get_file_handler(nullptr, ha_thd()->mem_root))->
-        max_supported_key_part_length();
+        max_supported_key_part_length(create_info);
 }
 
 
