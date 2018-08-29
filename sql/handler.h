@@ -4164,6 +4164,10 @@ class handler {
   */
 
   virtual bool is_ignorable_error(int error);
+  virtual bool continue_partition_copying_on_error(int error) {
+    (void)(error);
+    return false;
+  }
 
   /**
     @brief Determine whether an error is fatal or not.

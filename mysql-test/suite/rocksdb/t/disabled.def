@@ -28,7 +28,7 @@ issue495 : native partitioning
 nonflushing_analyze_parts_debug : native partitioning
 partition : native partitioning
 rocksdb : native partitioning
-rocksdb_cf_per_partition : native partitioning
+rocksdb_cf_per_partition : enable when https://bugs.mysql.com/bug.php?id=91763 is fixed
 rocksdb_parts : native partitioning
 show_engine : native partitioning
 tbl_opt_data_index_dir : native partitioning
