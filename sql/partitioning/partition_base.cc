@@ -5833,14 +5833,12 @@ int Partition_base::check_for_upgrade(HA_CHECK_OPT *check_opt)
 void Partition_base::rpl_before_write_rows()
 {
   // TODO: class handler has no member rpl_before_write_rows
-/*
+
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_before_write_rows();
   }
-*/
-  DBUG_ASSERT(0);
 }
 
 /*
@@ -5848,15 +5846,11 @@ void Partition_base::rpl_before_write_rows()
 */
 void Partition_base::rpl_after_write_rows()
 {
-// TODO: class handler has no member rpl_after_write_rows
-/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_after_write_rows();
   }
-*/
-  DBUG_ASSERT(0);
 }
 
 /*
@@ -5865,15 +5859,11 @@ void Partition_base::rpl_after_write_rows()
 */
 void Partition_base::rpl_before_delete_rows()
 {
-// TODO: class handler has no member rpl_before_delete_rows
-/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_before_delete_rows();
   }
-*/
-  DBUG_ASSERT(0);
 }
 
 /*
@@ -5881,15 +5871,11 @@ void Partition_base::rpl_before_delete_rows()
 */
 void Partition_base::rpl_after_delete_rows()
 {
-// TODO: class handler has no member rpl_after_delete_rows
-/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_after_delete_rows();
   }
-*/
-  DBUG_ASSERT(0);
 }
 
 /*
@@ -5898,15 +5884,11 @@ void Partition_base::rpl_after_delete_rows()
 */
 void Partition_base::rpl_before_update_rows()
 {
-// TODO: class handler has no member rpl_before_update_rows
-/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_before_update_rows();
   }
-*/
-  DBUG_ASSERT(0);
 }
 
 /*
@@ -5914,15 +5896,11 @@ void Partition_base::rpl_before_update_rows()
 */
 void Partition_base::rpl_after_update_rows()
 {
-// TODO: class handler has no member rpl_after_update_rows
-/*
   uint i;
   for (i= 0; i < m_tot_parts; i++)
   {
     m_file[i]->rpl_after_update_rows();
   }
-*/
-  DBUG_ASSERT(0);
 }
 
 } // namespace native_part

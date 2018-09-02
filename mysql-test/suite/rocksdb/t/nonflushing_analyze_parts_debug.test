@@ -1,5 +1,7 @@
 --source include/have_debug_sync.inc
 --source include/have_rocksdb.inc
+# Remove when https://jira.percona.com/browse/PS-4705 is fixed
+--source ../include/have_write_committed.inc
 
 CREATE TABLE t1 (a INT PRIMARY KEY) ENGINE=RocksDB
        PARTITION BY RANGE (a) (

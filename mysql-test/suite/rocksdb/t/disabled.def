@@ -15,11 +15,4 @@ validate_datadic : PS-4218 - Make .frm/schema validation optional at compile tim
 
 add_index_inplace : inplace alter partitioning has not yet been implemented
 add_index_inplace_crash : inplace alter partitioning has not yet been implemented
-bulk_load : enable when https://jira.percona.com/browse/PS-4705 is fixed
-bulk_load_rev_cf : enable when https://jira.percona.com/browse/PS-4705 is fixed
-bulk_load_rev_cf_and_data : enable when https://jira.percona.com/browse/PS-4705 is fixed
-bulk_load_rev_data : enable when https://jira.percona.com/browse/PS-4705 is fixed
-bulk_load_unsorted : enable when https://jira.percona.com/browse/PS-4705 is fixed
-bulk_load_unsorted_rev : enable when https://jira.percona.com/browse/PS-4705 is fixed
-get_error_message : needs to be fixed
 rocksdb_cf_per_partition : enable when https://bugs.mysql.com/bug.php?id=91763 is fixed

@@ -1,6 +1,8 @@
 --source include/have_rocksdb.inc
 --source include/have_binlog_format_row.inc
 --source include/master-slave.inc
+# Remove when https://jira.percona.com/browse/PS-4705 is fixed
+--source ../include/have_write_committed.inc
 
 create table t (i int primary key auto_increment) engine=rocksdb partition by key (i) partitions 3;
 
