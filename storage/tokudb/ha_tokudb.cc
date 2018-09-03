@@ -36,7 +36,15 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 
 #include "ha_tokudb.h"
 
+#include "ha_tokupart.h"
+
 #include "sql/sql_db.h"
+
+#include "dd/dd.h"
+#include "dd/dictionary.h"
+#include "dd/properties.h"
+#include "dd/types/table.h"
+#include "dd/types/partition.h"
 
 pfs_key_t ha_tokudb_mutex_key;
 pfs_key_t num_DBs_lock_key;
@@ -8144,6 +8152,7 @@ bool ha_tokudb::rpl_lookup_rows() {
 
 // handlerton
 #include "hatoku_hton.cc"
+#include "ha_tokupart.cc"
 
 // generate template functions
 namespace tokudb {
