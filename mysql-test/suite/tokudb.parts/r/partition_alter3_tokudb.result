@@ -35,8 +35,6 @@ f_charbig VARCHAR(1000) )
 ENGINE = MEMORY;
 SET AUTOCOMMIT= 1;
 SET @@session.sql_mode= '';
-Warnings:
-Warning	3090	Changing sql mode 'NO_AUTO_CREATE_USER' is deprecated. It will be removed in a future release.
 # End of basic preparations needed for all tests
 #-----------------------------------------------
 
@@ -57,7 +55,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 t1_id.sdi
 t1_main_id.tokudb
 t1_status_id.tokudb
@@ -82,7 +80,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`)) */
 t1_id.sdi
 t1_P_p0_main_id.tokudb
@@ -103,7 +101,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (dayofyear(`f_date`)) */
 t1_id.sdi
 t1_P_p0_main_id.tokudb
@@ -122,7 +120,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`)) */
 t1_id.sdi
 t1_P_p0_main_id.tokudb
@@ -147,7 +145,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -177,7 +175,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -207,7 +205,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -261,7 +259,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -299,7 +297,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -334,7 +332,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -366,7 +364,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -395,7 +393,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -421,7 +419,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB) */
@@ -444,7 +442,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (year(`f_date`))
 (PARTITION p0 ENGINE = TokuDB) */
 t1_id.sdi
@@ -468,7 +466,7 @@ Table	Create Table
 t1	CREATE TABLE `t1` (
   `f_date` date DEFAULT NULL,
   `f_varchar` varchar(30) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 t1_id.sdi
 t1_main_id.tokudb
 t1_status_id.tokudb
@@ -512,7 +510,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 t1_id.sdi
 t1_main_id.tokudb
 t1_status_id.tokudb
@@ -538,7 +536,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1) */
 t1_id.sdi
 t1_P_p0_main_id.tokudb
@@ -566,7 +564,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -596,7 +594,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -629,7 +627,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -681,7 +679,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -722,7 +720,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -760,7 +758,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -795,7 +793,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -827,7 +825,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB,
@@ -856,7 +854,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB,
  PARTITION part1 ENGINE = TokuDB) */
@@ -882,7 +880,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY KEY (f_int1)
 (PARTITION p0 ENGINE = TokuDB) */
 t1_id.sdi
@@ -909,7 +907,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 t1_id.sdi
 t1_main_id.tokudb
 t1_status_id.tokudb

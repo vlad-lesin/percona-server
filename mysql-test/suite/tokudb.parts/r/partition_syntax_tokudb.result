@@ -35,8 +35,6 @@ f_charbig VARCHAR(1000) )
 ENGINE = MEMORY;
 SET AUTOCOMMIT= 1;
 SET @@session.sql_mode= '';
-Warnings:
-Warning	3090	Changing sql mode 'NO_AUTO_CREATE_USER' is deprecated. It will be removed in a future release.
 # End of basic preparations needed for all tests
 #-----------------------------------------------
 
@@ -659,7 +657,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY LIST ((`f_int1` % 2))
 (PARTITION part1 VALUES IN (NULL) ENGINE = TokuDB,
  PARTITION part3 VALUES IN (1) ENGINE = TokuDB) */
@@ -686,7 +684,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY LIST ((`f_int1` % 2))
 (PARTITION part1 VALUES IN (NULL) ENGINE = TokuDB,
  PARTITION part2 VALUES IN (0) ENGINE = TokuDB,
@@ -720,7 +718,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (`f_int1`) */
 
 DROP TABLE t1;
@@ -742,7 +740,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (`f_int1`)
 (PARTITION part1 ENGINE = TokuDB,
  PARTITION part2 ENGINE = TokuDB) */
@@ -827,7 +825,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY RANGE (`f_int1`)
 SUBPARTITION BY HASH (`f_int1`)
 (PARTITION part1 VALUES LESS THAN (10)
@@ -863,7 +861,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (`f_int1`)
 PARTITIONS 2 */
 
@@ -888,7 +886,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY RANGE (`f_int1`)
 SUBPARTITION BY HASH (`f_int1`)
 SUBPARTITIONS 2
@@ -913,7 +911,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (`f_int1`)
 PARTITIONS 1 */
 
@@ -938,7 +936,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY RANGE (`f_int1`)
 SUBPARTITION BY HASH (`f_int1`)
 SUBPARTITIONS 1
@@ -1682,7 +1680,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY HASH (`f_int1`)
 (PARTITION part1 ENGINE = TokuDB,
  PARTITION part2 ENGINE = TokuDB) */
@@ -1711,7 +1709,7 @@ t1	CREATE TABLE `t1` (
   `f_char1` char(20) DEFAULT NULL,
   `f_char2` char(20) DEFAULT NULL,
   `f_charbig` varchar(1000) DEFAULT NULL
-) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4
+) ENGINE=TokuDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 /*!50100 PARTITION BY RANGE (`f_int1`)
 SUBPARTITION BY HASH (`f_int1`)
 (PARTITION part1 VALUES LESS THAN (1000)
