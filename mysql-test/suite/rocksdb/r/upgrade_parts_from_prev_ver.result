@@ -5,7 +5,7 @@
 # Test for upgrade partitioning with mysql_upgrade
 ###
 # Unzip the zip file.
-# Restart the server
+# restart:<hidden args>
 # Execute mysql_upgrade
 mysql.columns_priv                                 OK
 mysql.component                                    OK

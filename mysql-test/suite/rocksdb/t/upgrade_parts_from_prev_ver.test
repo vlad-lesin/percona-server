@@ -1,8 +1,6 @@
 --source include/have_rocksdb.inc
 --source ../include/have_write_committed.inc
 
-# For data directory created in previous major version branch.
---source include/not_valgrind.inc
 #Zipped data directory was created with default 16K page size
 #Innodb does not recognizes partition table created in linux from windows
 #due to difference in path format.
@@ -24,9 +22,7 @@
 --file_exists $DATA_ARCH_PATH
 
 --echo # Stop DB server which was created by MTR default
---exec echo "wait" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
---shutdown_server
---source include/wait_until_disconnected.inc
+--source include/shutdown_mysqld.inc
 
 --source ../../parts/inc/upgrade_parts_from_prev_ver_mysql_upgrade.inc
 

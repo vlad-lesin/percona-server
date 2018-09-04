@@ -6,10 +6,9 @@
 --file_exists $DATA_ARCH_PATH
 --exec unzip -qo $DATA_ARCH_PATH -d $MYSQL_TMP_DIR
 
---echo # Restart the server
---exec echo "restart: --loose-skip-log-bin --skip-log-slave-updates --datadir=$MYSQLD_DATADIR1 $ADDITIONAL_OPTS" > $MYSQLTEST_VARDIR/tmp/mysqld.1.expect
---enable_reconnect
---source include/wait_until_connected_again.inc
+--let $restart_parameters = "restart: --loose-skip-log-bin --skip-log-slave-updates --datadir=$MYSQLD_DATADIR1 $ADDITIONAL_OPTS"
+--let $restart_hide_args = 1
+--source include/start_mysqld.inc
 
 --echo # Execute mysql_upgrade
 --source include/mysql_upgrade_preparation.inc
@@ -24,6 +23,9 @@ SELECT * FROM test.t1 ORDER BY a;
 
 --echo # Stop the server
 --source include/shutdown_mysqld.inc
+
+--let $restart_parameters =
+--let $restart_hide_args =
 
 --echo # Remove copied files
 --remove_file $DATA_ARCH_PATH
