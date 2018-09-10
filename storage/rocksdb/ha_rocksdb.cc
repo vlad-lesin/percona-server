@@ -471,6 +471,7 @@ static char *rocksdb_strict_collation_exceptions = nullptr;
 static my_bool rocksdb_collect_sst_properties = TRUE;
 static my_bool rocksdb_force_flush_memtable_now_var = FALSE;
 static my_bool rocksdb_force_flush_memtable_and_lzero_now_var = FALSE;
+static my_bool rocksdb_enable_native_partition = FALSE;
 static my_bool rocksdb_enable_ttl = TRUE;
 static my_bool rocksdb_enable_ttl_read_filtering = TRUE;
 static int rocksdb_debug_ttl_rec_ts = 0;
@@ -1301,6 +1302,12 @@ static MYSQL_SYSVAR_BOOL(pause_background_work, rocksdb_pause_background_work,
                          rocksdb_set_pause_background_work, false);
 
 static MYSQL_SYSVAR_BOOL(
+    enable_native_partition, rocksdb_enable_native_partition,
+    PLUGIN_VAR_READONLY,
+    "Enable native partitioning", nullptr,
+    nullptr, false);
+
+static MYSQL_SYSVAR_BOOL(
     enable_ttl, rocksdb_enable_ttl, PLUGIN_VAR_RQCMDARG,
     "Enable expired TTL records to be dropped during compaction.", nullptr,
     nullptr, true);
@@ -1630,6 +1637,7 @@ static struct st_mysql_sys_var *rocksdb_system_variables[] = {
     MYSQL_SYSVAR(collect_sst_properties),
     MYSQL_SYSVAR(force_flush_memtable_now),
     MYSQL_SYSVAR(force_flush_memtable_and_lzero_now),
+    MYSQL_SYSVAR(enable_native_partition),
     MYSQL_SYSVAR(enable_ttl),
     MYSQL_SYSVAR(enable_ttl_read_filtering),
     MYSQL_SYSVAR(debug_ttl_rec_ts),
@@ -3921,7 +3929,8 @@ static int rocksdb_init_func(void *const p) {
   rocksdb_hton->flags = HTON_TEMPORARY_NOT_SUPPORTED |
                         HTON_SUPPORTS_EXTENDED_KEYS | HTON_CAN_RECREATE;
 
-  rocksdb_hton->partition_flags = rocksdb_partition_flags;
+  if (rocksdb_enable_native_partition)
+    rocksdb_hton->partition_flags = rocksdb_partition_flags;
 
   DBUG_ASSERT(!mysqld_embedded);
 
@@ -4774,7 +4783,8 @@ static handler *rocksdb_create_handler(my_core::handlerton *const hton,
                                        my_core::TABLE_SHARE *const table_arg,
                                        my_core::MEM_ROOT *const mem_root) {
 
-  if (table_arg && table_arg->db_type() == rocksdb_hton &&
+  if (rocksdb_enable_native_partition &&
+      table_arg && table_arg->db_type() == rocksdb_hton &&
       table_arg->partition_info_str && table_arg->partition_info_str_len) {
     ha_rockspart *file = new (mem_root) ha_rockspart(hton, table_arg);
     if (file && file->init_partitioning(mem_root)) {

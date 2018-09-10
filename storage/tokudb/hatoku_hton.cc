@@ -354,7 +354,8 @@ static int tokudb_init_func(void *p) {
 #endif
 
     tokudb_hton->create = tokudb_create_handler;
-    tokudb_hton->partition_flags = tokudb_partition_flags;
+    if (tokudb::sysvars::enable_native_partition)
+        tokudb_hton->partition_flags = tokudb_partition_flags;
     tokudb_hton->close_connection = tokudb_close_connection;
     tokudb_hton->kill_connection = tokudb_kill_connection;
 
@@ -661,7 +662,8 @@ static int tokudb_done_func(TOKUDB_UNUSED(void* p)) {
 static handler* tokudb_create_handler(handlerton* hton,
                                       TABLE_SHARE* table,
                                       MEM_ROOT* mem_root) {
-    if (table && table->db_type() == tokudb_hton && table->partition_info_str &&
+    if (tokudb::sysvars::enable_native_partition &&
+        table && table->db_type() == tokudb_hton && table->partition_info_str &&
         table->partition_info_str_len) {
         ha_tokupart* file = new (mem_root) ha_tokupart(hton, table);
         if (file && file->init_partitioning(mem_root)) {
