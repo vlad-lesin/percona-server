@@ -246,16 +246,8 @@ a	b
 3	7
 DROP TABLE t1;
 CREATE TABLE t1 (i INT, j INT, k INT, PRIMARY KEY (i), KEY(j)) ENGINE = ROCKSDB PARTITION BY KEY(i) PARTITIONS 4;
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t1', is deprecated and will be removed in a future release. Please use native partitioning instead.
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t1', is deprecated and will be removed in a future release. Please use native partitioning instead.
 ALTER TABLE t1 ADD INDEX kij(i,j), ALGORITHM=INPLACE;
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t1', is deprecated and will be removed in a future release. Please use native partitioning instead.
 DROP INDEX kij ON t1;
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t1', is deprecated and will be removed in a future release. Please use native partitioning instead.
 SHOW CREATE TABLE t1;
 Table	Create Table
 t1	CREATE TABLE `t1` (
@@ -267,8 +259,6 @@ t1	CREATE TABLE `t1` (
 ) ENGINE=ROCKSDB DEFAULT CHARSET=latin1
 /*!50100 PARTITION BY KEY (i)
 PARTITIONS 4 */
-Warnings:
-Warning	1287	The partition engine, used by table 'test.t1', is deprecated and will be removed in a future release. Please use native partitioning instead.
 SELECT * FROM t1 ORDER BY i LIMIT 10;
 i	j	k
 1	1	1

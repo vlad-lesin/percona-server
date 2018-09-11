@@ -1,5 +1,6 @@
 --source include/have_rocksdb.inc
---source ../include/have_write_committed.inc
+--source ../../rocksdb/include/have_write_committed.inc
+--source ../include/have_native_partitioning.inc
 
 #Zipped data directory was created with default 16K page size
 #Innodb does not recognizes partition table created in linux from windows
