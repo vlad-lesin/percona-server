@@ -302,7 +302,9 @@ bool trans_commit(THD *thd, bool ignore_global_read_lock) {
 */
 
 bool trans_commit_implicit(THD *thd, bool ignore_global_read_lock) {
-  bool res = false;
+  bool ha_commit_res = false;
+  TC_LOG::enum_result tc_log_commit_res = TC_LOG::RESULT_SUCCESS;
+
   DBUG_ENTER("trans_commit_implicit");
 
   /*
@@ -322,11 +324,11 @@ bool trans_commit_implicit(THD *thd, bool ignore_global_read_lock) {
     thd->server_status &=
         ~(SERVER_STATUS_IN_TRANS | SERVER_STATUS_IN_TRANS_READONLY);
     DBUG_PRINT("info", ("clearing SERVER_STATUS_IN_TRANS"));
-    res = ha_commit_trans(thd, true, ignore_global_read_lock);
+    ha_commit_res = ha_commit_trans(thd, true, ignore_global_read_lock);
   } else if (tc_log)
-    tc_log->commit(thd, true);
+    tc_log_commit_res = tc_log->commit(thd, true);
 
-  if (res == false)
+  if (ha_commit_res == false)
     if (thd->rpl_thd_ctx.session_gtids_ctx().notify_after_transaction_commit(
             thd))
       LogErr(WARNING_LEVEL, ER_TRX_GTID_COLLECT_REJECT);
@@ -348,7 +350,7 @@ bool trans_commit_implicit(THD *thd, bool ignore_global_read_lock) {
 
   thd->dd_client()->commit_modified_objects();
   thd->locked_tables_list.adjust_renamed_tablespace_mdls(&thd->mdl_context);
-  DBUG_RETURN(res);
+  DBUG_RETURN(ha_commit_res || tc_log_commit_res != TC_LOG::RESULT_SUCCESS);
 }
 
 /**
@@ -458,7 +460,8 @@ bool trans_rollback_implicit(THD *thd) {
 
 bool trans_commit_stmt(THD *thd, bool ignore_global_read_lock) {
   DBUG_ENTER("trans_commit_stmt");
-  int res = false;
+  int ha_commit_res = false;
+  TC_LOG::enum_result tc_log_commit_res = TC_LOG::RESULT_SUCCESS;
   /*
     We currently don't invoke commit/rollback at end of
     a sub-statement.  In future, we perhaps should take
@@ -476,12 +479,12 @@ bool trans_commit_stmt(THD *thd, bool ignore_global_read_lock) {
   thd->get_transaction()->merge_unsafe_rollback_flags();
 
   if (thd->get_transaction()->is_active(Transaction_ctx::STMT)) {
-    res = ha_commit_trans(thd, false, ignore_global_read_lock);
+    ha_commit_res = ha_commit_trans(thd, false, ignore_global_read_lock);
     if (!thd->in_active_multi_stmt_transaction())
       trans_reset_one_shot_chistics(thd);
   } else if (tc_log)
-    tc_log->commit(thd, false);
-  if (res == false && !thd->in_active_multi_stmt_transaction())
+    tc_log_commit_res = tc_log->commit(thd, false);
+  if (ha_commit_res == false && !thd->in_active_multi_stmt_transaction())
     if (thd->rpl_thd_ctx.session_gtids_ctx().notify_after_transaction_commit(
             thd))
       LogErr(WARNING_LEVEL, ER_TRX_GTID_COLLECT_REJECT);
@@ -491,7 +494,7 @@ bool trans_commit_stmt(THD *thd, bool ignore_global_read_lock) {
 
   thd->get_transaction()->reset(Transaction_ctx::STMT);
 
-  DBUG_RETURN(res);
+  DBUG_RETURN(ha_commit_res || tc_log_commit_res != TC_LOG::RESULT_SUCCESS);
 }
 
 /**
